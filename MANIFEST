@@ -1,0 +1,16 @@
+Changes
+MANIFEST
+Makefile.PL
+README
+lib/Cafe/Application.pm
+lib/Cafe/Base.pm
+lib/Cafe/Class.pm
+lib/Cafe/Export.pm
+lib/Cafe/Filters.pm
+lib/Cafe/Listing.pm
+lib/Cafe/NamedQuery.pm
+lib/Cafe/Path.pm
+lib/Cafe/Script.pm
+t/00-load.t
+t/pod-coverage.t
+t/pod.t
