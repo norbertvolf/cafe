@@ -900,6 +900,40 @@ sub summaries {
 }
 #}}}
 
+#{{{ url
+=head2 url
+
+Return url based on definition.
+
+=over Parameters
+
+=item $row - reference to row with url parameter values
+
+=item $column - name of column to find url definition
+
+=back
+
+=cut
+sub url {
+	my $self = shift;
+	my $column = shift;
+	my $row = shift;
+	my $url;
+
+	
+	if ( $row && $column) {
+		if ( exists( $self->definition()->{columns}->{$column}) ) {
+			$url = $self->definition->{columns}->{$column}->{url}->{prefix};
+			$url .= ( $url =~ /\?/ ? "&" : "?" );
+			$url .= join("&", map { "$_=$row->{$_}"} @{$self->definition->{columns}->{$column}->{url}->{params}});
+		} else {
+			die "Column with url parameters is not defined";
+		}
+	}
+	return($url);
+}
+#}}}
+
 
 sub DESTROY {
 	my ($self) = @_;
