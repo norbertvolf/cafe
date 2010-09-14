@@ -12,7 +12,6 @@ WriteMakefile(
 		'Test::More' => 0,
 		'Apache2::Const' => 0,
 		'Apache2::Cookie' => 0,
-		'Apache2::Filters' => 0,
 		'Apache2::Log' => 0,
 		'Apache2::Request' => 0,
 		'Apache2::RequestIO' => 0,
