@@ -1,0 +1,13 @@
+This is the debian package for the Cafe-Application module.
+It was created by root <root@volf.hqzl.bata.cz> using dh-make-perl.
+
+It was downloaded from http://search.cpan.org/dist/Cafe-Application/
+
+This copyright info was automatically extracted from the perl module.
+It may not be accurate, so you better check the module sources
+if you don't want to get into legal troubles.
+
+
+
+The Debian packaging is (C) 2010, root <root@volf.hqzl.bata.cz> and
+is licensed under the same terms as the software itself (see above).
