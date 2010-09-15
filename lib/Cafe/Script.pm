@@ -10,7 +10,6 @@ use Proc::PID::File;
 use Sys::Syslog;
 use Apache::ConfigFile;
 use Time::Piece;
-use Cafe::Filters;
 
 
 #{{{ pod
