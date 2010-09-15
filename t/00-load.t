@@ -6,7 +6,6 @@ BEGIN {
 	use_ok( 'Cafe::Application' );
 	use_ok( 'Cafe::Base' );
 	use_ok( 'Cafe::Class' );
-	use_ok( 'Cafe::Export' );
 	use_ok( 'Cafe::Filters' );
 	use_ok( 'Cafe::Listing' );
 	use_ok( 'Cafe::NamedQuery' );

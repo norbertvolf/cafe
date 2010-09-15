@@ -51,7 +51,6 @@ TODO: {
   module_boilerplate_ok('lib/Cafe/Application.pm');
   module_boilerplate_ok('lib/Cafe/Base.pm');
   module_boilerplate_ok('lib/Cafe/Class.pm');
-  module_boilerplate_ok('lib/Cafe/Export.pm');
   module_boilerplate_ok('lib/Cafe/Filters.pm');
   module_boilerplate_ok('lib/Cafe/Listing.pm');
   module_boilerplate_ok('lib/Cafe/NamedQuery.pm');

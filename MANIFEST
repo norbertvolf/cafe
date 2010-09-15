@@ -5,7 +5,6 @@ README
 lib/Cafe/Application.pm
 lib/Cafe/Base.pm
 lib/Cafe/Class.pm
-lib/Cafe/Export.pm
 lib/Cafe/Filters.pm
 lib/Cafe/Listing.pm
 lib/Cafe/NamedQuery.pm
