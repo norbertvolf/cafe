@@ -125,14 +125,6 @@ can be same as root or can be parent class based on
 Cafe::Class. $dbh is alternative dbh used before
 Cafe::Application->{dbh}.
 
-You can define class by parameteres query, querycound (
-obsolete way) or by $query hash.
-
-.. note:: if you have query,querycount, ... depending on request, you can do this:
-    
-    instance->SUPER::new($root,$parent, undef, undef, dbh, definition) # leave query, querycount empty
-    
-    call $self->queryinit({query=>'',querycount=>'',orderby=>''},$self->{dbh}) somewhere later (e.g. in $self->rules())
 =cut
 sub new {
 	my ($self, $root, $parent, @params) = @_;
@@ -170,23 +162,8 @@ sub new {
 			};
 		}
 		$instance->queryinit();
-	} else { #OBSOLETE version of Cafe::Listing parameters
-		my $dbh = $params[2] ? $params[2] : $root->dbh;
-		if ( ! exists($params[3]->{ttl}) ) {
-			$params[3]->{ttl} = 0;
-		}
-		$instance = $self->SUPER::new($root, $parent, $dbh, $params[3]); 
-		bless($instance);
-
-		if ( $params[0] ) {
-			$instance->{query} = new Cafe::NamedQuery($dbh, $params[0]);
-		}
-
-		if ( $params[1] ) {
-			$instance->{querycount} =  new Cafe::NamedQuery($dbh, $params[1]);
-		}
-		$instance->{orderby} = [];
 	}
+
 	$instance->{pages} = [];
 	$instance->{list} = [];
 	$instance->{_count} = undef;
@@ -926,6 +903,7 @@ sub url {
 			$url = $self->definition->{columns}->{$column}->{url}->{prefix};
 			$url .= ( $url =~ /\?/ ? "&" : "?" );
 			$url .= join("&", map { "$_=$row->{$_}"} @{$self->definition->{columns}->{$column}->{url}->{params}});
+			$self->dump($url);
 		} else {
 			die "Column with url parameters is not defined";
 		}
