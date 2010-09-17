@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 11;
+use Test::More tests => 9;
 
 sub not_in_file_ok {
     my ($filename, %regex) = @_;
@@ -48,7 +48,6 @@ TODO: {
     "placeholder date/time"       => qr(Date/time)
   );
 
-  module_boilerplate_ok('lib/Cafe/Application.pm');
   module_boilerplate_ok('lib/Cafe/Base.pm');
   module_boilerplate_ok('lib/Cafe/Class.pm');
   module_boilerplate_ok('lib/Cafe/Filters.pm');

@@ -1,9 +1,9 @@
 #!perl -T
 
-use Test::More tests => 9;
+use Test::More tests => 7;
 
 BEGIN {
-	use_ok( 'Cafe::Application' );
+#	use_ok( 'Cafe::Application' );
 	use_ok( 'Cafe::Base' );
 	use_ok( 'Cafe::Class' );
 	use_ok( 'Cafe::Filters' );
