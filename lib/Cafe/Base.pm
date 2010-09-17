@@ -471,4 +471,47 @@ sub template_paths {
 }
 #}}}
 
+#{{{ clean_uri
+=head2 clean_uri
+
+Remove uri_base from uri
+
+=cut
+sub clean_uri {
+	my ($self, $uri) = @_;
+
+	if ( $self->dir_config('uri_base')) {
+		my $uri_base = $self->dir_config('uri_base');
+		$uri_base = $uri_base . "/" if ( ! $uri_base =~ /\/$/ );
+		$uri_base = "/" . $uri_base if ( ! $uri_base =~ /^\// );
+		$uri =~ s/^$uri_base//;
+		$uri =~ s/\/$//;
+		return($uri);
+	} else {
+		die "Parameter uri_base not defined."
+	}
+}
+#}}}
+
+#{{{ rich_uri
+=head2 rich_uri
+
+Return uri from HTTP request and cleaned by uri_base from configuration
+
+=cut
+sub rich_uri {
+	my ($self, $uri) = @_;
+
+	if ( $self->dir_config('uri_base')) {
+		my $uri_base = $self->dir_config('uri_base');
+		$uri_base = $uri_base . "/" if ( ! $uri_base =~ /\/$/ );
+		$uri_base = "/" . $uri_base if ( ! $uri_base =~ /^\// );
+		$uri =~ s/^\///;
+		$uri =~ s/\/$//;
+		return($uri_base . $uri);
+	} else {
+		die "Parameter uri_base not defined."
+	}
+}
+#}}}
 1;
