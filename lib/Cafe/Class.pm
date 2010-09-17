@@ -21,6 +21,8 @@ use constant {
 use POSIX;
 use Time::Piece;
 use Encode;
+
+#{{{ pod
 =head1 NAME
 
 Cafe::Class - Method for implementation bussines logic
@@ -200,7 +202,9 @@ option in apache configureation to enable memcaching:
 =cut
 
 =head1 METHODS
+#}}}
 
+#{{{ new
 #{{{
 =head2 new()
 
@@ -232,7 +236,6 @@ Column is reference of hash for define properties of class . (for structure of d
 =cut
 #}}}
 sub new {
-#{{{
 	my ($self, $root, $parent, @params) = @_;
 	my ($instance) = {}; bless($instance);
 	my $msgid = 0;
@@ -250,21 +253,29 @@ sub new {
 	if ( ref($instance->{parent}) ) { weaken($instance->{parent}); }
 
 
-	#If third argument is HASH it means you put all definitions thru
-	#this HASH
+	#Third argument is HASH it means you put all definitions thru this HASH
 	if ( ref($params[0]) eq "HASH" ) {
 		$instance->{_definition} = $params[0];
 		$instance->{dbh} = defined($instance->{_definition}->{dbh}) ? $instance->{_definition}->{dbh} : $root->dbh;
-	} else {
-		$instance->{dbh} = defined($params[0]) ? $params[0] : $root->dbh;
-		$instance->{_definition} = defined($params[1]) ? $params[1] : undef;
 	}
-
-	foreach my $key (sort(keys(%{$instance->{_definition}->{columns}}))) {
-		if ( defined($instance->{_definition}->{columns}->{$key}->{default}) ) {
-			$instance->{$key} = $instance->{_definition}->{columns}->{$key}->{default};
+	
+	if ( exists($instance->{_definition}->{columns}) ) {
+		#Set default values
+		foreach my $key (sort(keys(%{$instance->{_definition}->{columns}}))) {
+			$instance->{$key} = $instance->{_definition}->{columns}->{$key}->{default} if ( defined($instance->{_definition}->{columns}->{$key}->{default}) );
+		}
+		#Rich url_base
+		foreach my $key (sort(keys(%{$instance->{_definition}->{columns}}))) {
+			if ( exists($instance->{_definition}->{columns}->{$key}->{url}) ) {
+				$instance->{_definition}->{columns}->{$key}->{url}->{prefix} = $root->rich_uri($instance->{_definition}->{columns}->{$key}->{url}->{prefix});
+			}
 		}
 	}
+
+	if ( exists($instance->{_definition}->{form}->{method_del_url}) ) {
+		$instance->{_definition}->{form}->{method_del_url} = $root->rich_uri($instance->{_definition}->{form}->{method_del_url});
+	}
+				
 
 	if ( $root && $root->{user} ) { 
 		$instance->{stateuser} = $root->{user}->iduser(); 
@@ -277,19 +288,17 @@ sub new {
 	}
 
 	return $instance;
-#}}}
 }
+#}}}
 
-#{{{
+#{{{ default_session
 =head2 default_session()
 
 Load value to property $name from seession. If not exists value in session 
 set value to property from $value parameter.
 
 =cut
-#}}}
 sub default_session {
-#{{{
 	my ($self, $name, $value) = @_;
 	if ( exists($self->{root}->{session}->{ref($self)}->{$name}) ) {
 		if ( exists($self->{_definition}->{columns}->{$name}) && $self->{_definition}->{columns}->{$name}->{type} && $self->{_definition}->{columns}->{$name}->{type} == DB_DATE ) {
@@ -306,33 +315,29 @@ sub default_session {
 	} else {
 		$self->{$name} = $value;
 	}
-#}}}
 }
+#}}}
 
-#{{{
+#{{{ definition
 =head2 definition
 
 Return hash of definition.	
 
 =cut
-#}}}
 sub definition {
-#{{{
 	my ($self) = @_;
 	return($self->{_definition});
-#}}}
 }
+#}}}
 
-#{{{
+#{{{ load
 =head2 load
 
 Load class data from database or from memcached server 
 if memcached_servers is defined in apache configuration.
 
 =cut
-#}}}
 sub load {
-#{{{
 	my ($self, $force) = @_;
 	my ($sth, $row, $key);
 
@@ -416,10 +421,10 @@ sub load {
 		#Save loaded data to cache
 		$self->savetocache();	
 	}
-#}}}
 }
+#}}}
 
-#{{{
+#{{{ save
 =head2 save()
 
 Save to database instance of Cafe::Class. Class must 
@@ -431,9 +436,7 @@ If memcached_servers option is defined in apache configuration
 save method also save data to memcached server
 
 =cut 
-#}}}
 sub save {
-#{{{
 	my ($self) = @_;
 	my ($sql, $row, $sth, $column, $key, @values);
 	
@@ -538,10 +541,10 @@ sub save {
 		#Ukladame data do memcached, je-li to povoleno
 		$self->savetocache();	
 	}
-#}}}
 }
+#}}}
 
-#{{{
+#{{{ settocache
 =head2 settocache()
 
 Save data to memcached server
@@ -549,9 +552,7 @@ Save data to memcached server
 Method has no parameters
 
 =cut
-#}}}
 sub savetocache {
-#{{{
 	my ($self) = @_;
 	use vars qw($memcached_error);
 
@@ -581,12 +582,12 @@ sub savetocache {
 			print(STDERR "AF warning " . __FILE__ . " line " . __LINE__ . " Error write data to memcached server.\n");	
 		}
 	}
-#}}}
 }
+#}}}
 
+#{{{ nextval
 #Pro primarni klic vygeneruje hodnotu ze sekvence
 sub nextval {
-#{{{
 	my ($self) = @_;
 	my ($sql);
 	#Najdeme primarni klic a pokud ma sekvenci tak generujeme klic
@@ -617,11 +618,11 @@ sub nextval {
 	} else {
 		die "AF error " . __FILE__ . " line " . __LINE__ . ": You set nextval only on simple primary-key is defined.";
 	}
-#}}}
 }
+#}}}
 
-
-#Vraci primarnich klicu {{{
+#{{{ primary_key
+#Vraci primarnich klicu
 sub primary_key {
 	my ($self) = @_;
 
@@ -634,7 +635,8 @@ sub primary_key {
 }
 #}}}
 
-#Vraci primarnich klicu {{{
+#{{{ primary_keys
+#Vraci primarnich klicu
 sub primary_keys {
 	my ($self) = @_;
 	if ( ! defined($self->{primary_keys}) ) {
@@ -650,7 +652,8 @@ sub primary_keys {
 }
 #}}}
 
-#Vraci zda je definovan jednoduchy klic {{{
+#{{{ primary_defined
+#Vraci zda je definovan jednoduchy klic
 sub primary_defined {
 	my ($self) = @_;
 	my $retval = 1;
@@ -669,7 +672,8 @@ sub primary_defined {
 }
 #}}}
 
-#Vraci podminku where {{{
+#{{{ primary_where
+#Vraci podminku where
 sub primary_where {
 	my ($self) = @_;
 	if ( ! defined($self->{primary_where}) ) {
@@ -683,7 +687,8 @@ sub primary_where {
 }
 #}}}
 
-#Vraci hodnoty primarniho klice {{{
+#{{{ primary_values
+#Vraci hodnoty primarniho klice 
 sub primary_values {
 	my ($self) = @_;
 	if ( ! defined($self->{primary_values}) ) {
@@ -697,7 +702,8 @@ sub primary_values {
 }
 #}}}
 
-#Vrací jakým způsobem se má ukládat na základe primárního klíče, jestli to je update  nebo insert {{{
+#{{{ save_type
+#Vrací jakým způsobem se má ukládat na základe primárního klíče, jestli to je update  nebo insert
 sub save_type {
 	my ($self) = @_;
 	my ($sql, $sth, $row,$retval, $key);
@@ -764,7 +770,7 @@ sub save_type {
 }
 #}}}
 
-#{{{
+#{{{ rules
 =head2 rules
 
 Check each value from content by _definition hash from class. Values with 
@@ -774,9 +780,7 @@ Parameter $content is contains values to check and parse. If $content is not
 defined method try load content from HTTP request byt Apache2::Request class.
 
 =cut
-#}}}
 sub rules {
-#{{{
 	my ($self, $content, $unlocalized) = @_;
 	my ($key);
 
@@ -828,9 +832,10 @@ sub rules {
 		$self->delete();
 	}
 	return(!$self->{msgid});
-#}}}
 }
+#}}}
 
+#{{{ parseproperty
 =head2 parseproperty
 
 Check and parse value from outside of application. If value is not valid set msgid.
@@ -838,9 +843,7 @@ If value is valid save the value to property with $destination key. All paramete
 to use form checking and parsing is stored in _definition hash.
 
 =cut
-
 sub parseproperty {
-#{{{
 	my ($self, $value, $destination, $unlocalized) = @_;
 
 	my $type = $self->{_definition}->{columns}->{$destination}->{type};
@@ -941,10 +944,10 @@ sub parseproperty {
 	}
 
 	return($self->{msgid});
-#}}}
 }
+#}}}
 
-
+#{{{ rulekey
 #V metode GET z prohlizece hleda 
 #primarni klic a v pripade uspechu
 #ho ulozi do vlastnosti primarniho klice
@@ -959,7 +962,9 @@ sub rulekey {
 	}
 	return(! $self->{msgid});
 }
+#}}}
 
+#{{{ to_time_piece
 =head2 to_time_piece
 
 Convert string with date in %Y-%m-%d %H:%M:%S
@@ -983,7 +988,9 @@ sub to_time_piece {
 
 	return($value);
 }
+#}}}
 
+#{{{ set_msgid
 =head2 set_msgid 
 
 Set msgid to class and root data for TT2, also try join 
@@ -1016,7 +1023,9 @@ sub set_msgid {
 	}
 
 }
+#}}}
 
+#{{{ dump
 sub dump {
 	my ($self, @params) = @_;
 	if (scalar(@params))  {
@@ -1025,7 +1034,9 @@ sub dump {
 		$self->{root}->dump($self->gethash(1));
 	}
 }
+#}}}
 
+#{{{ delete
 #Oznaci zaznam jako smazaný
 sub delete {
 	my ($self) = @_;
@@ -1036,7 +1047,9 @@ sub delete {
 		die ("AF error " . __FILE__ . " line " . __LINE__ . ": For mask as deleted you need state column defined");
 	}
 }
+#}}}
 
+#{{{ is_deleted
 sub is_deleted {
 	my ($self) = @_;
 	
@@ -1046,7 +1059,9 @@ sub is_deleted {
 		return(0);
 	}
 }
+#}}}
 
+#{{{ gethash
 =head2 gethash
 
 Returns formated values by hash based on definition of columns
@@ -1092,8 +1107,9 @@ sub gethash() {
 
 	return($data);
 }
+#}}}
 
-
+#{{{ state_username
 =head2 state_username
 
 Return name of user
@@ -1105,7 +1121,9 @@ sub state_username {
 		return($self->state_user()->signature() ? $self->state_user()->signature() : $self->state_user()->username());
 	}
 }
+#}}}
 
+#{{{ state_user
 =head2 state_user
 
 Return instance of user information class defined in apache configuration file
@@ -1120,8 +1138,9 @@ sub state_user {
 	}
 	return($self->{_state_user});
 }
+#}}}
 
-
+#{{{session
 =head2  session
 
 Return reference to session information for class
@@ -1135,7 +1154,9 @@ sub session {
 	}
 	return($self->{root}->{session}->{ref($self)});
 }
+#}}}
 
+#{{{AUTOLOAD
 =head2 Method AUTOLOAD
 
 Autoloader to handle columns and autoloaders 
@@ -1212,52 +1233,45 @@ sub AUTOLOAD {
 		}
 	}
 }
+#}}}
 
-
-#{{{
+#{{{now
 =head2 Method now
 
 Return Time::Piece actual time
 
 =cut 
-#}}}
 sub now {
-#{{{
 	my ($self) = @_;
 	my $now = localtime();
 	return($now);
-#}}}
 }
+#}}}
 
-
-#{{{
+#{{{is_primary_values
 =head2 Method is_primary_values
 
 Return 0 if not defined any primary value.
 
 =cut 
-#}}}
 sub is_primary_values {
-#{{{
 	my ($self) = @_;
 	my $is_def = 1;
 	foreach my $value (@{$self->primary_values()}) {
 		if ( ! defined($value) ) { $is_def = 0; }
 	}
 	return($is_def);
-#}}}
 }
+#}}}
 
-#{{{
+#{{{columns
 =head2 Method columns
 
 Return array of columns from definitions sorted by 
 index parameter in column items
 
 =cut 
-#}}}
 sub columns {
-#{{{
 	my ($self) = @_;
 	my @columns;
 	foreach my $key (keys(%{$self->definition->{columns}})) {
@@ -1274,19 +1288,16 @@ sub columns {
 	}
 	@columns = sort { $a->{position} <=> $b->{position} } @columns;
 	return(\@columns);
-#}}}
 }
+#}}}
 
-
-#{{{
+#{{{identifier
 =head2 Method identifier
 
 Return string identify class
 
 =cut 
-#}}}
 sub identifier {
-#{{{
 	my ($self) = @_;
 	if ( ! defined($self->{_identifier}) ) {
 		if ( ref($self) =~ /([a-zA-Z_]+)$/ ) {
@@ -1294,17 +1305,14 @@ sub identifier {
 		}
 	}
 	return($self->{_identifier});
-#}}}
 }
+#}}}
 
-
-#{{{
+#{{{check
 =head2 check
 	check istance properties
 =cut
-#}}}
 sub check {
-#{{{
 	my ($self) = @_;
 
 	#statestamp filter
@@ -1317,16 +1325,14 @@ sub check {
 	}
 
 	return( ! $self->{msgid} );
-#}}}
 }
+#}}}
 
-#{{{
+#{{{check
 =head2 check
 	return object index in Listing::list array
 =cut
-#}}}
 sub get_index {
-#{{{
 	my ($self) = @_;
 	
 	my $index = 0;
@@ -1336,68 +1342,56 @@ sub get_index {
 		}
 		$index++;
 	}
-#}}}
 }
+#}}}
 
-#{{{
+#{{{status_is
 =head2 status_is
 	return status containing value
 =cut
-#}}}
 sub status_is {
-#{{{
 	my ($self, $value, $column) = @_;
 	if ( ! $column ) {
 		$column = $self->{status};
 	}
 	return ( (($column + 0) & $value) == $value);
-#}}}
 }
+#}}}
 
-#{{{
+#{{{status_add
 =head2 status_add
 	adding selected bit into status
 =cut
-#}}}
 sub status_add {
-#{{{
 	my ($self, $value, $column) = @_;
 	if ( ! $column ) {
 		$column = 'status';
 	}
 	$self->{$column} = $self->{$column} | $value;
-#}}}
 }
+#}}}
 
-#{{{
+#{{{status_remove
 =head2 status_remove
 	removing selected bit from status
 =cut
-#}}}
 sub status_remove {
-#{{{
 	my ($self, $value, $column) = @_;
 	if ( ! $column ) {
 		$column = 'status';
 	}
 	$self->{$column} = $self->{$column} & ~$value;
-#}}}
 }
+#}}}
 
-#{{{
+#{{{loaded
 =head2 loaded
 	return status of load ( if record not loaded from persitent area  return undef else return <> 0)
 =cut
-#}}}
 sub loaded {
-#{{{
 	my ($self) = @_;
 	return($self->{_loaded});
+}
 #}}}
-}
-
-sub DESTROY {
-	my ($self) = @_;
-}
 
 1;
