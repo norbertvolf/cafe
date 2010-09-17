@@ -5,7 +5,7 @@ use base qw(Cafe::Base);
 
 use constant MAX_CONTENT_LENGTH => 1024 * 1024 * 5; # 5M
 use constant RAW => 0;
-our $VERSION = '0.8';
+our $VERSION = '0.81';
 
 use Carp;
 use Apache2::Const -compile => qw(OK FORBIDDEN NOT_FOUND SERVER_ERROR REDIRECT);
@@ -266,7 +266,7 @@ sub controller {
 			$method = $self->{methods}->{$r->param('method')};
 			$self->{method} = $r->param('method');
 		} elsif ( $self->dir_config('uri_base') ) { 
-			my $uri = $self->uri();
+			my $uri = $self->clean_uri( $r->uri() );
 			if ( exists( $self->{methods}->{$uri} ) ) {
 				$method = $self->{methods}->{$uri};
 			} elsif ( $uri =~ s/\//_/g && exists( $self->{methods}->{$uri} ) ) {
@@ -1080,8 +1080,8 @@ sub template {
 	#Try found classic method template
 	if ( ! $self->{template} && $self->dir_config('uri_base') ) {
 			foreach my $path ( $self->template_paths() ) {
-				if ( -f "$path/" . $self->uri . ".tt2" ) {
-					$self->{template} = $self->uri . ".tt2";
+				if ( -f "$path/" . $self->clean_uri( $self->{request}->uri() ) . ".tt2" ) {
+					$self->{template} = $self->clean_uri( $self->{request}->uri() ) . ".tt2";
 					last;	
 				}
 			}
@@ -1090,27 +1090,4 @@ sub template {
 	return($self->{template});
 }
 #}}}
-
-#{{{ uri
-=head2 uri
-
-Return uri from HTTP request and cleaned by uri_base from configuration
-
-=cut
-sub uri {
-	my ($self) = @_;
-
-	#Generate uri from request
-	if ( ! $self->{_uri} && $self->dir_config('uri_base')) {
-		my $uri = $self->{request}->uri();
-		my $uri_base = $self->dir_config('uri_base');
-		$uri =~ s/^$uri_base//;
-		$uri =~ s/\/$//;
-		$self->{_uri} = $uri;
-	}
-
-	return($self->{_uri});
-}
-#}}}
-
 1;
