@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.1-1) stable; urgency=low
+
+  * URI management
+
+ -- Norbert Volf <norbert@volf.eu>  Fri, 18 Sep 2010 15:31:07 +0200
+
 libcafe-application-perl (0.8-1) unstable; urgency=low
 
   * Initial Release.
