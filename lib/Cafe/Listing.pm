@@ -903,7 +903,6 @@ sub url {
 			$url = $self->definition->{columns}->{$column}->{url}->{prefix};
 			$url .= ( $url =~ /\?/ ? "&" : "?" );
 			$url .= join("&", map { "$_=$row->{$_}"} @{$self->definition->{columns}->{$column}->{url}->{params}});
-			$self->dump($url);
 		} else {
 			die "Column with url parameters is not defined";
 		}
