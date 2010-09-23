@@ -16,6 +16,7 @@ use Encode qw(encode);
 use Template;
 use Carp;
 use Time::Piece;
+use Cafe::Filters;
 
 $Data::Dumper::Maxdepth = 2;
 
