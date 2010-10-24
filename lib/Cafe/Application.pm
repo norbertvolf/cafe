@@ -203,9 +203,13 @@ sub controller {
 		#Convert json to hash
 		my $json = JSON::XS->new->utf8(0)->pretty->allow_nonref;
 		my $hash = $json->decode($js);
-		if (exists $self->{methods}->{$hash->{method}}) {
-			$self->{method} = $hash->{method};
-			my $method = $self->{methods}->{$hash->{method}};
+
+		my $uri = "/" . $self->clean_uri( $hash->{method} );
+		$self->{method} = $uri if ( exists( $self->{methods}->{"$uri"} ) );
+		$self->{method} = $hash->{method} if ( ! $self->{method} && exists( $self->{methods}->{$hash->{method}} ) );
+
+		if ($self->{method}) {
+			my $method = $self->{methods}->{$self->{method}};
 			my $retval = &$method(@{$hash->{params}});
 			$retval = {
 				id     => $hash->{id},
@@ -266,20 +270,15 @@ sub controller {
 			$method = $self->{methods}->{$r->param('method')};
 			$self->{method} = $r->param('method');
 		} elsif ( $self->dir_config('uri_base') ) { 
-			my $uri = $self->clean_uri( $r->uri() );
-			if ( exists( $self->{methods}->{$uri} ) ) {
-				$method = $self->{methods}->{$uri};
-			} elsif ( $uri =~ s/\//_/g && exists( $self->{methods}->{$uri} ) ) {
-				$method = $self->{methods}->{$uri};
-			}
+			my $uri = "/" . $self->clean_uri( $r->uri() );
+			$method = $self->{methods}->{"$uri"} if ( exists( $self->{methods}->{"$uri"} ) );
 		}
-		if ( ! $method && ! $r->param('method') && exists( $self->{methods}->{index} )  ) {
-			$method = $self->{methods}->{index};
-		}
+
 		#Call method
 		if ( $method ) {
 			&$method();
 		} else {
+			$self->log("Method on uri " . $r->uri() . " not found.");
 			$self->{status}	= Apache2::Const::NOT_FOUND;
 		}
 	}
@@ -1077,7 +1076,7 @@ sub template {
 		}
 	}
 
-	#Try found classic method template
+	#Try found route template
 	if ( ! $self->{template} && $self->dir_config('uri_base') ) {
 			foreach my $path ( $self->template_paths() ) {
 				if ( -f "$path/" . $self->clean_uri( $self->{request}->uri() ) . ".tt2" ) {
@@ -1086,6 +1085,8 @@ sub template {
 				}
 			}
 	}
+
+	die "Cafe framework: Template not found for " . $self->clean_uri( $self->{request}->uri() ) . "." if ( ! $self->{template} );
 
 	return($self->{template});
 }
