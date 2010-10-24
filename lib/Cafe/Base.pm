@@ -18,7 +18,7 @@ use Carp;
 use Time::Piece;
 use Cafe::Filters;
 
-$Data::Dumper::Maxdepth = 2;
+$Data::Dumper::Maxdepth = 4;
 
 #{{{ new
 sub new {
@@ -53,6 +53,7 @@ sub tmpl {
 		$self->{_tmpl} = new Template( 
 			INCLUDE_PATH => join(":", @paths),
 			ENCODING => 'utf8' ,
+			RECURSION => 1 ,
 			FILTERS => {
 				'cslatex' => [ \&Cafe::Filters::cslatex_filter_factory, 1 ],
 				'a2ps' => [ \&Cafe::Filters::a2ps, 1 ],
