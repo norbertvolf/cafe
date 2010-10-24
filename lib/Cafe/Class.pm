@@ -252,11 +252,12 @@ sub new {
 	if ( ref($instance->{root}) ) { weaken($instance->{root}); }
 	if ( ref($instance->{parent}) ) { weaken($instance->{parent}); }
 
-
 	#Third argument is HASH it means you put all definitions thru this HASH
 	if ( ref($params[0]) eq "HASH" ) {
 		$instance->{_definition} = $params[0];
 		$instance->{dbh} = defined($instance->{_definition}->{dbh}) ? $instance->{_definition}->{dbh} : $root->dbh;
+	} else {
+		die "Error in definition of $self definition send as parameter in construction is not hash reference."
 	}
 	
 	if ( exists($instance->{_definition}->{columns}) ) {
