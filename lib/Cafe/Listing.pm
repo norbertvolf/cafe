@@ -14,6 +14,7 @@ use base qw(Cafe::Class);
 use DBD::Pg qw(:pg_types);
 use Cafe::NamedQuery;
 use Cafe::Class;
+use Carp;
 
 #{{{ new
 =head1 NAME
