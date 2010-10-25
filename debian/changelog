@@ -1,9 +1,21 @@
-libcafe-application-perl (0.8.2-1) stable; urgency=low
+libcafe-application-perl (0.8.4-1) stable; urgency=low
 
   * Remove old "method" routing 
   * Add script pgbuilder.pl to create Class from pg table definition
 
  -- Norbert Volf <norbert@volf.eu>  Fri, 18 Sep 2010 15:31:07 +0200
+
+libcafe-application-perl (0.8.3-1) stable; urgency=low
+
+  * Fix enable Cafe::Filters in Cafe::Base
+
+ -- Norbert Volf <norbert@volf.eu>  Wed, 23 Sep 2010 13:38:07 +0200
+
+libcafe-application-perl (0.8.2-1) stable; urgency=low
+
+  * Clear debug code
+
+ -- Norbert Volf <norbert@volf.eu>  Sun, 19 Sep 2010 18:31:07 +0200
 
 libcafe-application-perl (0.8.1-1) stable; urgency=low
 
