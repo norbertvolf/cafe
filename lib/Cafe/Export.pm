@@ -19,7 +19,9 @@ sub new {
 	}
 
 	if ( $instance->{definition}->{source} ) {
-		$instance->{definition}->{source}->{dbh} = DBI->connect(@{$instance->{definition}->{source}->{connection}}) or $root->error("$!");
+		if ( $instance->{definition}->{source}->{connection} ) {
+			$instance->{definition}->{source}->{dbh} = DBI->connect(@{$instance->{definition}->{source}->{connection}}) or $root->error("$!");
+		}
 		if ( exists($instance->{definition}->{source}->{before}) ) {
 			foreach my $query (@{$instance->{definition}->{source}->{before}}) {
 				$instance->{definition}->{source}->{dbh}->do($query);
@@ -31,7 +33,9 @@ sub new {
 	}
 
 	if ( $instance->{definition}->{destination} ) {
-		$instance->{definition}->{destination}->{dbh} = DBI->connect(@{$instance->{definition}->{destination}->{connection}}) or $root->error("$!");
+		if ( $instance->{definition}->{destination}->{connection} ) {
+			$instance->{definition}->{destination}->{dbh} = DBI->connect(@{$instance->{definition}->{destination}->{connection}}) or $root->error("$!");
+		}
 		if ( exists($instance->{definition}->{destination}->{before}) ) {
 			foreach my $query (@{$instance->{definition}->{destination}->{before}}) {
 				$instance->{definition}->{destination}->{dbh}->do($query);
