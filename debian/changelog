@@ -1,3 +1,10 @@
+libcafe-application-perl (0.8.5-1) stable; urgency=low
+
+  * Cafe::Export If connection key in definition is not defined, 
+    constructor ignore preparing connection 
+
+ -- Norbert Volf <norbert@volf.eu>  26 Oct 2010
+
 libcafe-application-perl (0.8.4-1) stable; urgency=low
 
   * Remove old "method" routing 
