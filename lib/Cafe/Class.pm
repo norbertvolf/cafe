@@ -267,16 +267,19 @@ sub new {
 		}
 		#Rich url_base
 		foreach my $key (sort(keys(%{$instance->{_definition}->{columns}}))) {
-			if ( exists($instance->{_definition}->{columns}->{$key}->{url}) ) {
-				$instance->{_definition}->{columns}->{$key}->{url}->{prefix} = $root->rich_uri($instance->{_definition}->{columns}->{$key}->{url}->{prefix});
-			}
+			my $column = $instance->{_definition}->{columns}->{$key};
+			$column->{url}->{prefix} = $root->rich_uri($column->{url}->{prefix}) if ( exists($column->{url}) );
+			$column->{select}->{method} = $root->rich_uri($column->{select}->{method}) if ( exists($column->{select}) && exists($column->{select}->{method}));
 		}
 	}
 
-	if ( exists($instance->{_definition}->{form}->{method_del_url}) ) {
-		$instance->{_definition}->{form}->{method_del_url} = $root->rich_uri($instance->{_definition}->{form}->{method_del_url});
+	if ( exists($instance->{_definition}->{form}) ) {
+		my $form = $instance->{_definition}->{form};
+		$form->{method_del_url} = $root->rich_uri($form->{method_del_url});
+		$form->{method_get} = $root->rich_uri($form->{method_get});
+		$form->{method_set} = $root->rich_uri($form->{method_set});
+		$form->{method_del} = $root->rich_uri($form->{method_del});
 	}
-				
 
 	if ( $root && $root->{user} ) { 
 		$instance->{stateuser} = $root->{user}->iduser(); 
