@@ -481,7 +481,9 @@ Remove uri_base from uri
 =cut
 sub clean_uri {
 	my ($self, $uri) = @_;
-
+	
+	return if ( ! $uri );
+	
 	if ( $self->dir_config('uri_base')) {
 		my $uri_base = $self->dir_config('uri_base');
 		$uri_base = $uri_base . "/" if ( ! $uri_base =~ /\/$/ );
@@ -504,12 +506,12 @@ Return uri from HTTP request and cleaned by uri_base from configuration
 sub rich_uri {
 	my ($self, $uri) = @_;
 
+	return if ( ! $uri );
+
 	if ( $self->dir_config('uri_base')) {
 		my $uri_base = $self->dir_config('uri_base');
-		$uri_base = $uri_base . "/" if ( ! $uri_base =~ /\/$/ );
-		$uri_base = "/" . $uri_base if ( ! $uri_base =~ /^\// );
+		my $uri = $self->clean_uri($uri);
 		$uri =~ s/^\///;
-		$uri =~ s/\/$//;
 		return($uri_base . $uri);
 	} else {
 		die "Parameter uri_base not defined."
