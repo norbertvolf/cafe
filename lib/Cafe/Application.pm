@@ -648,6 +648,7 @@ sub listing_view {
 		$obj->load();
 		$self->{data}->{"$instance"} = $obj;
 		$self->{data}->{listing} = $obj;
+		$self->{data}->{instance} = $obj;
 	} else {
 		$self->{status} = Apache2::Const::FORBIDDEN;
 	}
@@ -684,6 +685,7 @@ sub class_view {
 		$obj->load();
 		$self->{data}->{"$instance"} = $obj;
 		$self->{data}->{record} = $obj;
+		$self->{data}->{instance} = $obj;
 	} else {
 		$self->{status} = Apache2::Const::FORBIDDEN;
 	}
@@ -725,6 +727,7 @@ sub class_print {
 		$obj->load();
 		$self->{data}->{"$instance"} = $obj;
 		$self->{data}->{record} = $obj;
+		$self->{data}->{instance} = $obj;
 		$self->{contenttype} = $contenttype;
 
 		if ( $format ) {
@@ -775,6 +778,7 @@ sub listing_print {
 		$obj->load();
 		$self->{data}->{"$instance"} = $obj;
 		$self->{data}->{listing} = $obj;
+		$self->{data}->{instance} = $obj;
 		$self->{contenttype} = $contenttype;
 
 		if ( $format ) {
