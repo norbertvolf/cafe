@@ -1019,7 +1019,7 @@ sub rpc_listing_view {
 =cut
 sub log {
 	my ($self, $message) = @_;
-	$self->dump("$message");
+	say STDERR "$message";
 }
 #}}}
 
