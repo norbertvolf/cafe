@@ -169,7 +169,7 @@ sub getstring {
 		if ( exists($self->translations()->{"C"}) ) {
 			$locale = "C";
 		} else {
-			die "AF error " . __FILE__ . " line " . __LINE__ . ": Not defined " . $self->{user}->locale() . " locale.\n";
+			die "Cafe: " . __FILE__ . " line " . __LINE__ . ": Not defined " . $self->{user}->locale() . " locale.\n";
 		}
 	}
 
@@ -181,10 +181,11 @@ sub getstring {
 		} elsif ( exists($self->translations()->{"C"}->{$key}) ) {
 			$retval =  $self->translations()->{"C"}->{$key};
 		} else {
-			die "AF error " . __FILE__ . " line " . __LINE__ . ": Cannot found \"$key\" in translations see translation files in " . $self->dir_config('path_template') . " directories\n";
+			$self->log("Cafe: " . __FILE__ . ": " . __LINE__ . ": Cannot found \"$key\" in translations see translation files in " . $self->dir_config('path_template') . " directories");
+			$retval = "$key";
 		}
 	} else {
-		return $self->translations()->{$locale};
+			die "Cafe: " . __FILE__ . " line " . __LINE__ . ": Not defined key in getstring function\n";
 	}
 
 	if ( $encoding ) {
