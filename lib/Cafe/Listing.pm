@@ -381,14 +381,19 @@ sub prepare_parameters {
 	my ($self) = @_;
 #Pripravi seznam parametru pro dotaz (pouzijeme pojmenovane parametry)
 	foreach my $key ( keys(%{$self->{_definition}->{columns}}) ) {
-		if ( $self->{_definition}->{columns}->{$key}->{type} && $self->{_definition}->{columns}->{$key}->{type} == Cafe::Class::DB_DATE ) {
+		my $column = $self->{_definition}->{columns}->{$key};
+		if ( $column->{type} && $column->{type} == Cafe::Class::DB_DATE ) {
 			$self->{params}->{$key} = { "value" => $self->{$key} ? $self->{$key}->datetime() : undef , type => { pg_type => PG_VARCHAR } };
-		} elsif ( $self->{_definition}->{columns}->{$key}->{type} && $self->{_definition}->{columns}->{$key}->{type} == Cafe::Class::DB_INT ) {
+		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_INT ) {
 			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_INT4 } };
-		} elsif ( $self->{_definition}->{columns}->{$key}->{type} && $self->{_definition}->{columns}->{$key}->{type} == Cafe::Class::DB_INT8 ) {
+		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_INT8 ) {
 			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_INT8 } };
 		} else {
 			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_VARCHAR } };
+		}
+
+		if ( $column->{prepare} && ref($column->{prepare}) eq "CODE" ) {
+			$self->{params}->{$key}->{value} = &{$column->{prepare}}($self->{params}->{$key}->{value});
 		}
 	}
 }
