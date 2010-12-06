@@ -181,7 +181,7 @@ sub getstring {
 		} elsif ( exists($self->translations()->{"C"}->{$key}) ) {
 			$retval =  $self->translations()->{"C"}->{$key};
 		} else {
-			$self->log("Cafe: " . __FILE__ . ": " . __LINE__ . ": Cannot found \"$key\" in translations see translation files in " . $self->dir_config('path_template') . " directories");
+			$self->log("Warning Cafe::Base::getstring (" . __LINE__ . "): Key \"$key\" not found in translations");
 			$retval = "$key";
 		}
 	} else {
