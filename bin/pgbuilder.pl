@@ -143,11 +143,11 @@ $output .= "\t\t\t},\n";
 #Generate forms
 $output .= "\t\t\tform => {\n";
 $output .= "\t\t\t\turl => '?type=json',\n";
-$output .= "\t\t\t\tmethod_get => '" . $table . "_get',\n";
-$output .= "\t\t\t\tmethod_set => '" . $table . "_set',\n";
-$output .= "\t\t\t\tmethod_del => '" . $table . "_del',\n";
+$output .= "\t\t\t\tmethod_get => '/$schema/$table/get/',\n";
+$output .= "\t\t\t\tmethod_set => '/$schema/$table/set/',\n";
+$output .= "\t\t\t\tmethod_del => '/$schema/$table/del/',\n";
 $output .= "\t\t\t\tmethod_del_caption => '$definition->{form}->{method_del_caption}',\n";
-$output .= "\t\t\t\tmethod_del_url => '?method=" . $table . "_search',\n";
+$output .= "\t\t\t\tmethod_del_url => '?method=/$schema/$table/search/',\n";
 $output .= "\t\t\t\tcaption_edit => 'Edit',\n";
 $output .= "\t\t\t\tcaption_save => 'Save',\n";
 $output .= "\t\t\t\tcaption_cancel => 'Cancel',\n";
