@@ -1103,6 +1103,13 @@ sub gethash() {
 		}
 	}
 
+	foreach my $key (sort(keys(%{$self->{_definition}->{autoloaders}}))) {
+		if ( exists( $self->{_definition}->{autoloaders}->{$key}->{show} ) ) {
+			eval(qq(\$data->{$key} = \$self->$key()->$self->{_definition}->{autoloaders}->{$key}->{show}));
+			
+		}
+	}
+
 	$data->{msgid} = $self->{msgid};
 	$data->{_global_msgid} = $self->{root}->{data}->{msgid};
 	$data->{message} = $self->{parent} eq $self->{root} ? $self->{root}->{data}->{message} : $self->{message};
