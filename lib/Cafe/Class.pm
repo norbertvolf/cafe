@@ -1319,7 +1319,6 @@ sub identifier {
 		}
 		$self->{_identifier} = join("_", $self->{_identifier}, @{$self->primary_values()}) if ( scalar(@{$self->primary_values()}) );
 	}
-	$self->dump($self->{_identifier});
 	return($self->{_identifier});
 }
 #}}}
