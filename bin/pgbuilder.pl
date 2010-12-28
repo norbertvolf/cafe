@@ -133,13 +133,6 @@ my $output = "{\n";
 $output .= "\t\t\ttitle => '" . ucfirst($title) . "',\n";
 $output .= "\t\t\tname => '$definition->{name}',\n";
 
-#Generate messages of persistent table
-$output .= "\t\t\tmessages => {\n";
-foreach my $level1 (@{$definition->{messages}}) {
-	$output .= "\t\t\t\t$level1->{name} => undef,\n";
-}
-$output .= "\t\t\t},\n";
-
 #Generate forms
 $output .= "\t\t\tform => {\n";
 $output .= "\t\t\t\turl => '?type=json',\n";
@@ -215,9 +208,6 @@ use warnings;
 use strict;
 use base qw(Cafe::Class);
 
-# Translation keys
-$keys
-
 sub new {
 	my (\$self, \$root, \$parent, \$$primarykey) = \@_;
 	my (\$instance) = \$self->SUPER::new(
@@ -232,10 +222,6 @@ sub new {
 		\$instance->load();	
 	}
 	return \$instance
-}
-
-sub DESTROY {
-	my (\$self) = \@_;
 }
 
 1;
