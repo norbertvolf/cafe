@@ -162,7 +162,13 @@ sub new {
 				default => 0
 			};
 		}
-		$instance->queryinit();
+
+		#Order by
+		if ( exists($instance->{_definition}->{orderby}) && ref($instance->{_definition}->{orderby}) eq "ARRAY" ) {
+			$instance->{orderby} = $instance->{_definition}->{orderby};
+		} elsif ( ! exists($instance->{orderby}) ) {
+			$instance->{orderby} = [];
+		}
 	}
 
 	$instance->{pages} = [];
@@ -203,53 +209,6 @@ sub is_pager {
 
 	return(1) if exists($self->definition->{querycount});
 	return(0);
-};
-#}}}
-
-#{{{ queryinit
-=head2 queryinit
-
-Initialize NamedQuery, dbh. It suppose $query to be a hash with 
-{ query=>, querycount=>, orderby=> } keys. Query is required, 
-other ones are optional
-
-=head3 Parameters
-
-=over 
-
-=item $query - string with SQL command
-
-=item $dbh - DBI database handle
-
-=back 
-
-=cut
-sub queryinit {
-	my ($self, $query, $dbh) = @_;
-
-	if ( ! defined($query) ) {
-		$query = $self->{_definition}
-	}
-
-	if ( ! defined($dbh) ) {
-		$dbh = exists($self->{_definition}->{dbh}) ? $self->{_definition}->{dbh} : $self->dbh();
-	}
-
-	if ( exists($query->{query}) ) {
-		$self->{query} = new Cafe::NamedQuery($dbh, $query->{query});
-	} else {
-		die "AF error " . __FILE__ . " line " . __LINE__ . ": query parameter must be defined for Cafe::Listing class.";
-	}
-
-	if ( exists($query->{querycount}) ) {
-		$self->{querycount} = new Cafe::NamedQuery($dbh, $query->{querycount});
-	}
-
-	if ( exists($query->{orderby}) && ref($query->{orderby}) eq "ARRAY" ) {
-		$self->{orderby} = $query->{orderby};
-	} elsif ( ! exists($self->{orderby}) ) {
-		$self->{orderby} = [];
-	}
 };
 #}}}
 
@@ -335,10 +294,10 @@ sub count {
 	my ($sth, $row, $key);
 	#Pokud neni definovany querycount, vse se ignoruje  a fce vraci undef
 
-	if ( ! defined($self->{"_count"}) && defined($self->{"querycount"}) ) {
+	if ( ! defined($self->{"_count"}) && exists($self->definition->{querycount}) ) {
 
 		#Try load count from memcache if possible
-		if ( $self->definition->{ttl} && $self->definition->{ttl} > 0 && $self->root()->memd() ) {
+		if ( $self->root()->memd() ) {
 			#Load data from memcache
 			$self->{root}->set_local_locale("C");
 			$self->{"_count"} = $self->root()->memd()->get($self->key_count);
@@ -347,21 +306,24 @@ sub count {
 
 		#We cannot fetch data from memcached, we must fetch data from database	
 		if ( ! defined($self->{"_count"}) )  {
+			my $querycount = new Cafe::NamedQuery($self->dbh, $self->definition->{querycount});
 			$self->prepare_parameters();
-			$self->{querycount}->bind_params($self->{params});
-			$self->{querycount}->sth()->{pg_server_prepare} = 0;
-			$self->{querycount}->sth()->execute() or die "AF error " . __FILE__ . " line " . __LINE__ . ": $!";
+			$querycount->bind_params($self->{params});
+			$querycount->sth()->{pg_server_prepare} = 0;
+			$querycount->sth()->execute() or die "AF error " . __FILE__ . " line " . __LINE__ . ": $!";
 
-			if ( $row = $self->{querycount}->sth()->fetchrow_arrayref() ){
+			if ( $row = $querycount->sth()->fetchrow_arrayref() ){
 				#Vysledek je ocekavany v prvni polozce
 				$self->{"_count"} = $row->[0];
 			}
-			$self->{querycount}->sth()->finish();
+			$querycount->sth()->finish();
 
-			if ( $self->definition->{ttl} && $self->definition->{ttl} > 0 && $self->root()->memd() ) {
-				#Save data to memcache
+			#
+			if ( $self->root()->memd() ) {
+				#Save data to memcache - a tam zapiseme vzdycky, count neni tak dulezity, aby nemohl byt cache, ale pokud neni implicitni, dame kratke ttl 1 min
+				my $ttl = $self->definition()->{ttl} ? $self->definition()->{ttl} : 300;
 				$self->{root}->set_local_locale("C");
-				my $retval = $self->root()->memd()->set($self->key_count, $self->{"_count"}, $self->definition()->{ttl});
+				my $retval = $self->root()->memd()->set($self->key_count, $self->{"_count"}, $ttl);
 				$self->{root}->restore_local_locale();
 
 				if ( $retval == 0 ) {
@@ -369,7 +331,7 @@ sub count {
 				}
 			}
 		}
-	} elsif ( ! defined($self->{"querycount"}) ) {
+	} elsif ( ! defined($self->definition->{querycount}) ) {
 		$self->{"_count"} = scalar(@{$self->{list}}) + 1;
 	}
 	return($self->{"_count"});
@@ -392,8 +354,8 @@ sub prepare_parameters {
 			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_VARCHAR } };
 		}
 
-		if ( $column->{prepare} && ref($column->{prepare}) eq "CODE" ) {
-			$self->{params}->{$key}->{value} = &{$column->{prepare}}($self->{params}->{$key}->{value});
+		if ( $column->{paramcbk} && ref($column->{paramcbk}) eq "CODE" ) {
+			$self->{params}->{$key}->{value} = &{$column->{paramcbk}}($self->{params}->{$key}->{value});
 		}
 	}
 }
@@ -451,19 +413,26 @@ sub load {
 			$self->{params}->{offset} = { value => int($self->{position} * $self->{perpage}), type => { pg_type => PG_INT4 }  };
 
 			#Nacteme data do vlastnosti list
-			$self->{query}->orderby($self->{orderby});
-			$self->{query}->bind_params($self->{params});
+			my $query;
+			if ( exists($self->definition->{query}) ) {
+				$query = new Cafe::NamedQuery($self->dbh, $self->definition()->{query});
+			} else {
+				die "Error Cafe::Listing::load : Value for key \"query\" in definition doesn't exist. (" . __LINE__ . ")\n";
+			}
 
-			$self->{query}->sth()->{pg_server_prepare} = 0;
+			$query->orderby($self->{orderby});
+			$query->bind_params($self->{params});
+
+			$query->sth()->{pg_server_prepare} = 0;
 			$self->dbh->{RaiseError} = 1; 
-			$self->{query}->sth()->execute() or die "AF error " . __FILE__ . " line " . __LINE__ . "\n\nError: $! (Class: " . ref($self) . " \n\nSQL Command: $self->{query}->{query}->{sql})\n\n";
+			$query->sth()->execute() or die "Error Cafe::Listing::load : $! in $query->{query}->{sql} (line " . __LINE__ . ")";
 			$self->dbh->{RaiseError} = 0; 
 
 			$values = [];
-			while ( $row = $self->{query}->sth()->fetchrow_hashref() ){
+			while ( $row = $query->sth()->fetchrow_hashref() ) {
 				push(@{$values}, $row);
 			}
-			$self->{query}->sth()->finish();
+			$query->sth()->finish();
 
 			#If ttl is defined save data to memcache
 			if ( $self->definition->{ttl} && $self->definition->{ttl} > 0 && $self->root()->memd() ) {
