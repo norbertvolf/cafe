@@ -3,6 +3,7 @@ package Cafe::Base;
 use utf8;
 use strict;
 use warnings;
+use base qw(Cafe::Object);
 
 use constant TEMPLATE => 1;
 use constant TRANSLATIONS_FILE => "translations.csv";
@@ -22,9 +23,8 @@ $Data::Dumper::Maxdepth = 4;
 
 #{{{ new
 sub new {
-	my ($self) = @_;
-
-	my ($instance) = {};
+	my $self = shift;
+	my $instance = $self->SUPER::new(); 
 	bless($instance);
 
 	#Property initialization
@@ -169,7 +169,7 @@ sub getstring {
 		if ( exists($self->translations()->{"C"}) ) {
 			$locale = "C";
 		} else {
-			die "Cafe: " . __FILE__ . " line " . __LINE__ . ": Not defined " . $self->{user}->locale() . " locale.\n";
+			die "Error Cafe::Base::getstring : Not defined " . $self->{user}->locale() . " locale. (line " . __LINE__ . ")\n";
 		}
 	}
 
@@ -181,11 +181,11 @@ sub getstring {
 		} elsif ( exists($self->translations()->{"C"}->{$key}) ) {
 			$retval =  $self->translations()->{"C"}->{$key};
 		} else {
-			$self->log("Warning Cafe::Base::getstring (" . __LINE__ . "): Key \"$key\" not found in translations");
+			$self->log("Warning Cafe::Base::getstring: Key \"$key\" not found in translations (line " . __LINE__ . ")");
 			$retval = "$key";
 		}
 	} else {
-			die "Cafe: " . __FILE__ . " line " . __LINE__ . ": Not defined key in getstring function\n";
+			die "Error Cafe::Base::getstring : Not defined key in getstring function. (line " . __LINE__ . ")\n";
 	}
 
 	if ( $encoding ) {
