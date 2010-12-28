@@ -1,8 +1,11 @@
 package Cafe::Class;
+
 use strict;
 use warnings;
 use utf8;
 use vars qw ($DEBUG);
+use base qw(Cafe::Object);
+
 use Scalar::Util qw(weaken);
 use constant {
 	DB_VARCHAR  => 0,
@@ -237,7 +240,7 @@ Column is reference of hash for define properties of class . (for structure of d
 #}}}
 sub new {
 	my ($self, $root, $parent, @params) = @_;
-	my ($instance) = {}; bless($instance);
+	my $instance = $self->SUPER::new(); 
 	my $msgid = 0;
 
 	#Set defalut values
@@ -264,6 +267,7 @@ sub new {
 		#Set default values
 		foreach my $key (sort(keys(%{$instance->{_definition}->{columns}}))) {
 			$instance->{$key} = $instance->{_definition}->{columns}->{$key}->{default} if ( defined($instance->{_definition}->{columns}->{$key}->{default}) );
+			$instance->{_definition}->{columns}->{$key}->{translate} = 1 if ( ! defined($instance->{_definition}->{columns}->{$key}->{translate}) );
 		}
 		#Rich url_base
 		foreach my $key (sort(keys(%{$instance->{_definition}->{columns}}))) {
@@ -1216,8 +1220,6 @@ sub AUTOLOAD {
 						$id[$i] =~ s/ $//g;
 						$ref[$i] =~ s/ $//g;
 
-
-
 						if ( $ref[$i] =~ /\$self->/ ) {
 							my $destination = '$obj->{$id[$i]}';
 							my $source = $ref[$i];
@@ -1240,7 +1242,7 @@ sub AUTOLOAD {
 		} elsif ( ! ($method =~ "^_") && exists($self->{$method}) ) {
 			return($self->{$method});
 		} else {
-			die "AF error " . __FILE__ . " line " . __LINE__ . ": Method $name is not defined";
+			$self->die("Cafe::Class::AUTLOADER", " Method $name is not defined", __LINE__);
 		}
 	}
 }
@@ -1309,12 +1311,15 @@ Return string identify class
 
 =cut 
 sub identifier {
-	my ($self) = @_;
+	my ($self, $identifier) = @_;
+	$self->{_identifier} = $identifier if ( $identifier );
 	if ( ! defined($self->{_identifier}) ) {
 		if ( ref($self) =~ /([a-zA-Z_]+)$/ ) {
 			$self->{_identifier} = lc($1);
 		}
+		$self->{_identifier} = join("_", $self->{_identifier}, @{$self->primary_values()}) if ( scalar(@{$self->primary_values()}) );
 	}
+	$self->dump($self->{_identifier});
 	return($self->{_identifier});
 }
 #}}}
