@@ -84,7 +84,7 @@ while (<STDIN>) { # like "while(defined($_ = <STDIN>)) {"
 			$def->{rule} = "1";
 			$position++;
 			#Prvni polozku (obvykle PK) jen zobrazit
-			$def->{position} = $position;
+			$def->{position} = '++$pos';
 			if ( $counter > 1 ) {
 				$def->{label} = join(" ",  map(ucfirst, split(/_/, $column)));
 				$def->{input} = "text";
@@ -210,6 +210,7 @@ use base qw(Cafe::Class);
 
 sub new {
 	my (\$self, \$root, \$parent, \$$primarykey) = \@_;
+	my \$pos = 0;
 	my (\$instance) = \$self->SUPER::new(
 		\$root, 
 		\$parent,
