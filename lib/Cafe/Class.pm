@@ -1052,7 +1052,7 @@ sub delete {
 		$self->{state} = $self->{state} | 4;
 		$self->save();
 	} else {
-		die ("AF error " . __FILE__ . " line " . __LINE__ . ": For mask as deleted you need state column defined");
+		$self->die("Cafe::Class::delete", "For mask as deleted you need state column defined", __LINE__);
 	}
 }
 #}}}
@@ -1179,11 +1179,12 @@ from _definition
 
 =cut 
 sub AUTOLOAD {
-	my ($self) = shift;
+	my $self = shift;
+	my $param = shift;
 	my $name = our $AUTOLOAD;
 
 	if ( ! ref( $self ) ) {
-		die ("AF error " . __FILE__ . " line " . __LINE__ . ": $self is not object.");
+		$self->die("Cafe::Class::AUTLOADER", " $self is not object.", __LINE__);
 	}
 	
 	#If not defined DESTROY method and this method is invocated finish method
@@ -1194,6 +1195,8 @@ sub AUTOLOAD {
 	if ( $name =~ /::([^:]+)$/ ) {
 		my $method = $1;
 		if ( exists($self->{_definition}->{columns}->{$method}) ) {
+			#Set property if param is defined
+			$self->{$method} = $param if ( defined($param) );
 			#If is invocated method with name defined as column return value of this column
 			return($self->{$method});
 		} elsif ( exists($self->{_definition}->{autoloaders}->{$method} ) ) {
@@ -1204,15 +1207,13 @@ sub AUTOLOAD {
 			#Create instance 
 			if ( (! defined($self->{$autoloader->{shadow}}))) {
 				my $obj;
-				eval("require $autoloader->{class}") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-				eval('$obj = new ' . $autoloader->{class} . '($self->{root}, $self);') or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@ (Creating class $autoloader->{class})";
+				eval("require $autoloader->{class}") or $self->die("Cafe::Class::AUTLOADER", "$@", __LINE__);
+				eval('$obj = new ' . $autoloader->{class} . '($self->{root}, $self);') or $self->die("Cafe::Class::AUTLOADER", "$@ (Creating class $autoloader->{class}", __LINE__);
 				if ( exists($autoloader->{id}) &&  exists($autoloader->{ref}) ) {
 					my @id = split(/,/, $autoloader->{id});
 					my @ref = split(/,/, $autoloader->{ref});
 
-					if ( scalar(@id) != scalar(@ref) ) {
-						die "AF error " . __FILE__ . " line " . __LINE__ . ": Definition for autoloader $method contains different keys for id and ref arrays. Error is in class " . ref($self) . ".";
-					}
+					$self->die("Cafe::Class::AUTLOADER", "Definition for autoloader $method contains different keys for id and ref arrays.", __LINE__) if ( scalar(@id) != scalar(@ref) );
 
 					for(my $i = 0; $i < scalar(@id); $i++)  {
 						$id[$i] =~ s/^ //g;
@@ -1223,7 +1224,7 @@ sub AUTOLOAD {
 						if ( $ref[$i] =~ /\$self->/ ) {
 							my $destination = '$obj->{$id[$i]}';
 							my $source = $ref[$i];
-							eval("$destination = $source") or die "AF error " . __FILE__ . " line " . __LINE__ . ": bad AUTOLOAD assignment \$obj->{$id[$i]} = \$self->{$ref[$i]} with error : $!";
+							eval("$destination = $source") or $self->die("Cafe::Class::AUTLOADER", "bad AUTOLOAD assignment \$obj->{$id[$i]} = \$self->{$ref[$i]} with error : $!", __LINE__);
 						} else {
 							$obj->{$id[$i]} = $self->{$ref[$i]};
 						}
