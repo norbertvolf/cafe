@@ -3,7 +3,6 @@ package Cafe::Class;
 use strict;
 use warnings;
 use utf8;
-use vars qw ($DEBUG);
 use base qw(Cafe::Object);
 
 use Scalar::Util qw(weaken);
@@ -47,10 +46,6 @@ Cafe::Class - Method for implementation bussines logic
 				dbh => undef, #Database handler used by instance, if handler is not defined, class use $root->{dbh}
 				name => 'complaints.complaints', #Name of table with persisted instance
 				ttl => 300, #Number of seconds used as time to live for memcached values, default value is 300
-				messages => { 
-					1 => 'Bad identifier', #Getstring keys used for error messages
-					2 => undef, #If getstring key is not defined, code try generate message from label or generate unknown error
-				},
 				form => {
 					url => '?type=json',
 					method_get => 'device_get',
@@ -72,13 +67,11 @@ Cafe::Class - Method for implementation bussines logic
 						rule => 1, #Enable column as possible to input from user
 
 
-						msgid => 1, #Key to message section
 						label => 'Identifier', #Getstring value to generate label on html
 						position => 1, #Position inside generated form
 					},
 					idarticle => {
 						type => Cafe::Class::DB_INT,
-						msgid => 2,
 						null => Cafe::Class::DB_NULL,
 						rule => 1,
 
@@ -109,7 +102,6 @@ Cafe::Class - Method for implementation bussines logic
 						type => Cafe::Class::DB_NUMERIC,
 						null => Cafe::Class::DB_NULL,
 						rule => 1,
-						msgid => 3,
 
 						label => 'Device Price',
 						input => 'text', #Type of widget used in form (defined in Record and TableRecord javascript classes - "text", "select", "checkbox", "area")
@@ -122,28 +114,24 @@ Cafe::Class - Method for implementation bussines logic
 					},
 					firstname => {
 						type => Cafe::Class::DB_VARCHAR,
-						msgid => 5,
 						null => Cafe::Class::DB_NULL,
 						opts => 30,
 						rule => 1,
 					},
 					lastname => {
 						type => Cafe::Class::DB_VARCHAR,
-						msgid => 6,
 						null => Cafe::Class::DB_NULL,
 						opts => 30,
 						rule => 1,
 					},
 					'zip' => {
 						type => Cafe::Class::DB_FMTCHAR,
-						msgid => 8,
 						null => Cafe::Class::DB_NULL,
 						opts => '^([0-9]{5})$',
 						rule => 1,
 					},
 					startdate => {
 						type => Cafe::Class::DB_DATE,
-						msgid => 10,
 						null => Cafe::Class::DB_NOTNULL,
 						rule => 1,
 					},
@@ -241,12 +229,11 @@ Column is reference of hash for define properties of class . (for structure of d
 sub new {
 	my ($self, $root, $parent, @params) = @_;
 	my $instance = $self->SUPER::new(); 
-	my $msgid = 0;
 
 	#Set defalut values
-	$instance->{msgid} = 0;
 	$instance->{message} = "";
 	$instance->{_loaded} = 0;
+	$instance->{_ok} = 1;
 	$instance->{_definition} = {};
 	$instance->{root} = $root;
 	$instance->{parent} = $parent;
@@ -260,7 +247,7 @@ sub new {
 		$instance->{_definition} = $params[0];
 		$instance->{dbh} = defined($instance->{_definition}->{dbh}) ? $instance->{_definition}->{dbh} : $root->dbh;
 	} else {
-		die "Error in definition of $self definition send as parameter in construction is not hash reference."
+		$instance->die("Cafe::Class::new",  "Error in definition of $self definition send as parameter in construction is not hash reference.", __LINE__);
 	}
 	
 	if ( exists($instance->{_definition}->{columns}) ) {
@@ -315,10 +302,6 @@ sub default_session {
 			}
 		} else {
 			$self->{$name} = $self->{root}->{session}->{ref($self)}->{$name};
-		}
-		if ( $DEBUG ) {
-			print(STDERR "AF debug " . __FILE__ . " line " . __LINE__ . ":\nParameter $name defaulted to value:\n");	
-			$self->dump($self->{$name});	
 		}
 	} else {
 		$self->{$name} = $value;
@@ -389,13 +372,6 @@ sub load {
 		if ( $self->{_definition} ) {
 			my $columns = join (",", map { $_ = ( $_ =~ /^to$/i ) ? '"' . $_ . '"' : $_ } sort(keys(%{$self->{_definition}->{columns}})));
 			my $sql = "SELECT $columns FROM $self->{_definition}->{name} WHERE " . $self->primary_where();
-			#Je zapnute debugovani tak vypisujeme parametry a sql dotaz
-			if ( $DEBUG ) {
-				print(STDERR "AF debug " . __FILE__ . " line " . __LINE__ . ":\nParameters:\n");	
-				$self->dump($self->primary_values());	
-				print(STDERR "SQL query:\n");	
-				$self->dump($sql);	
-			}
 			$sth = $self->{dbh}->prepare($sql);
 			$self->{root}->set_local_locale("C");
 			$sth->execute( @{$self->primary_values()} ) or die "AF error " . __FILE__ . " line " . __LINE__ . ": $_ - ($sql)";
@@ -494,14 +470,6 @@ sub save {
 			#Jako posledni pridame hodnutu prmarniho klice
 			push(@values,  @{$self->primary_values()});
 
-
-			#Je zapnute debugovani tak vypisujeme parametry a sql dotaz
-			if ( $DEBUG ) {
-				print(STDERR "AF debug " . __FILE__ . " line " . __LINE__ . ":\n" . "Parameters:\n");	
-				$self->dump(\@values);	
-				print(STDERR "SQL query:\n");	
-				$self->dump($sql);	
-			}
 			$sth = $self->{dbh}->prepare($sql);
 
 			$self->{root}->set_local_locale("C");
@@ -529,13 +497,6 @@ sub save {
 					my $value = $self->{$key};
 					push(@values,  $value);
 				}
-			}
-			#Je zapnute debugovani tak vypisujeme parametry a sql dotaz
-			if ( $DEBUG ) {
-				print(STDERR "AF debug " . __FILE__ . " line " . __LINE__ . ":\n" . "Parameters:\n");	
-				$self->dump(\@values);	
-				print(STDERR "SQL query:\n");	
-				$self->dump($sql);	
 			}
 			$self->{root}->set_local_locale("C");
 			if ( ! $self->{dbh}->do($sql, undef, @values) ) {
@@ -607,12 +568,6 @@ sub nextval {
 		) {
 			$sql = "SELECT nextval(?) as id";
 			#Je zapnute debugovani tak vypisujeme parametry a sql dotaz
-			if ( $DEBUG ) {
-				print(STDERR "AF debug " . __FILE__ . " line " . __LINE__ . ":\n" . "Parameters:\n");	
-				$self->dump($self->{_definition}->{columns}->{$primary_key}->{sequence});	
-				print(STDERR "SQL query:\n");	
-				$self->dump($sql);	
-			}
 			my $sth = $self->{dbh}->prepare($sql);
 			$self->{root}->set_local_locale("C");
 			$sth->execute( $self->{_definition}->{columns}->{$primary_key}->{sequence} ) or die "AF error " . __FILE__ . " line " . __LINE__ . ": $!";
@@ -647,16 +602,16 @@ sub primary_key {
 #Vraci primarnich klicu
 sub primary_keys {
 	my ($self) = @_;
-	if ( ! defined($self->{primary_keys}) ) {
-		$self->{primary_keys} = [];
+	if ( ! defined($self->{_primary_keys}) ) {
+		$self->{_primary_keys} = [];
 		foreach my $key (sort(keys(%{$self->{_definition}->{columns}}))) {
 			if ( $self->{_definition}->{columns}->{$key}->{primary_key}) {
-				push(@{$self->{primary_keys}}, $key);
+				push(@{$self->{_primary_keys}}, $key);
 			}
 		}
 	}
 
-	return($self->{primary_keys});
+	return($self->{_primary_keys});
 }
 #}}}
 
@@ -717,7 +672,7 @@ sub save_type {
 	my ($sql, $sth, $row,$retval, $key);
 	my @primary_keys = @{$self->primary_keys()};
 	if ( scalar(@primary_keys) == 0 ) {#Neni definovany primarni klic => s tim nejde vubec pracovat
-		die "AF error " . __FILE__ . " line " . __LINE__ . ": I cannot save record without PRIMARY KEY definition"
+		$self->die("Cafe::Class::save_type",  "Save record without PRIMARY KEY definition is not possible", __LINE__);
 	} elsif ( scalar(@primary_keys) == 1 ) {#Jednoduchy primarni klic jednoducha varianta
 		$key = $self->primary_keys()->[0];
 
@@ -727,7 +682,7 @@ sub save_type {
 			$retval = 2;
 		} elsif ( ! defined($self->{$key}) && ! $sequence ) {
 			#Pouze jeden klic a hodnota neni zadana chyba
-			die "AF error " . __FILE__ . " line " . __LINE__ . ": If you want write record with simple primary key withou sequence column of primary key must by definded";
+			$self->die("Cafe::Class::save_type",  "If you want write record with simple primary key withou sequence column of primary key must by definded", __LINE__);
 		} elsif ( defined($self->{$key}) &&  $sequence) {
 			#Pouze jeden klic a hodnota je zadana a existuje sequnce -> delamu update
 			$retval = 1;
@@ -757,12 +712,6 @@ sub save_type {
 		#Zkontrolujeme jestli existuje zaznam se slozenym primarnim klicem v databazi
 		$sql = "SELECT * FROM $self->{_definition}->{name} WHERE " . $self->primary_where();
 		#Je zapnute debugovani tak vypisujeme parametry a sql dotaz
-		if ( $DEBUG ) {
-			print(STDERR "AF debug " . __FILE__ . " line " . __LINE__ . ":\n" . "Parameters:\n");	
-			$self->dump($self->primary_values());	
-			print(STDERR "SQL query:\n");	
-			$self->dump($sql);	
-		}
 		$sth = $self->{dbh}->prepare($sql);
 		$self->{root}->set_local_locale("C");
 		$sth->execute( @{$self->primary_values()} ) or die "AF error " . __FILE__ . " line " . __LINE__ . ": $_";
@@ -792,18 +741,7 @@ sub rules {
 	my ($self, $content, $unlocalized) = @_;
 	my ($key);
 
-	if ( ! $content && $self->{root}->{request}) {
-		if ( $self->{root}->{request}->param() ) {
-			my %content = %{$self->{root}->{request}->param()};
-			$content = \%content;
-		}
-	}
-
-	#Je zapnute debugovani tak vypisujeme parametry a sql dotaz
-	if ( $DEBUG ) {
-		print(STDERR "AF debug " . __FILE__ . " line " . __LINE__ . ":\n" . "Cafe::Class::rules variable content:\n");	
-		$self->dump($content);	
-	}
+	$content = [%{$self->{root}->{request}->param()}] if ( ! $content && $self->{root}->{request} && $self->{root}->{request}->param() ) ;
 
 	foreach $key ( @{$self->primary_keys()} ) {
 		if ( $self->definition->{columns}->{$key}->{rule} ) {
@@ -811,7 +749,8 @@ sub rules {
 			$self->parseproperty($content->{$key}, $key, $unlocalized);
 		}
 	}
-	if ( $self->primary_defined() && $self->{msgid} == 0) {
+
+	if ( $self->primary_defined() && $self->okay ) {
 		#Kdyz se upravuje na zaklade ulozeneho zaznamu tak ho nejdriv nacti
 		$self->load(1);
 	}
@@ -821,14 +760,7 @@ sub rules {
 	#tak provedeme kontrolu
 	foreach $key (sort(keys(%{$self->{_definition}->{columns}}))) {
 		if ( 
-			$self->{_definition}->{columns}->{$key}->{rule} 
-			&& (
-				exists($content->{$key}) || ! $self->{_loaded}
-				&& (
-					$self->{root}->{request_type} 
-					&& ( $self->{root}->{request_type} eq "json" || $self->{root}->{request_type} eq "xmlrpc" ) 
-				)
-			)
+			$self->{_definition}->{columns}->{$key}->{rule} && exists($content->{$key})
 		) {
 			$content->{$key} = Encode::decode("utf-8", $content->{$key});
 			$self->parseproperty($content->{$key}, $key, $unlocalized);
@@ -839,7 +771,7 @@ sub rules {
 	if ( $content->{state} && ( ($content->{state} & 4) == 4 ) ) {
 		$self->delete();
 	}
-	return(!$self->{msgid});
+	return($self->okay);
 }
 #}}}
 
@@ -853,105 +785,95 @@ to use form checking and parsing is stored in _definition hash.
 =cut
 sub parseproperty {
 	my ($self, $value, $destination, $unlocalized) = @_;
+	my $column = $self->{_definition}->{columns}->{$destination}; 
+	my $orig = $value;
+	$column->{ok} = 1;
 
-	my $type = $self->{_definition}->{columns}->{$destination}->{type};
-	my $msgid = $self->{_definition}->{columns}->{$destination}->{msgid};
-	my $null = $self->{_definition}->{columns}->{$destination}->{null};
-	my $opts = $self->{_definition}->{columns}->{$destination}->{opts};
-	my $default_session = $self->{_definition}->{columns}->{$destination}->{default_session};
-	
-	#If null allowed and property is null or 
-	if ( $null ==  DB_NULL && ( ! defined($value) || $value eq "") ) {
-		$value = undef;
-		$msgid = 0;  
-	} elsif ( $type == DB_VARCHAR && defined($value)) {
-		# Now we will get internal server error instead of wrong behavior
-		if ( !defined($opts) ) {
-			die ("AF error " . __FILE__ . " line " . __LINE__ . ": You have to define opts value when using DB_VARCHAR type!")
+	if ( ( ! defined($value) || $value eq "") ) {
+		if ( $column->{null} ==  DB_NULL ) {
+			#If null allowed and property is null
+			$value = undef;
+		} else {
+			#else fire error message
+			$self->root->set_local_locale();
+			$column->{message} = sprintf($self->root->getstring('Field "%s" cannot be left blank'), $self->root->getstring($column->{label}));
+			$self->root->restore_local_locale();
+			$column->{ok} = 0;
 		}
-		#Check varchar values. If length of varchar value has zero AF consider value for NULL
-		if ( length($value) <= $opts && ( length($value) > 0 || $null ==  DB_NULL ) ) {
-			$msgid = 0;  
-		} 
-	} elsif ( $type == DB_FMTCHAR && defined($value)) {
-		#Check varchar values
-		if ( $value && $value =~ /$opts/ ) {
-			$msgid = 0;  
-		}
-	} elsif ( ( $type == DB_INT || $type == DB_INT8 ) && defined($value ) ) {
-		#Check integer values
-		if ( ($value =~ /^\s*(-{0,1}\d+)\s*$/) ) {
-			$value = $1;
-			$msgid = 0;  
-		}
-	} elsif ( $type == DB_DATE && defined($value)) {
-		#Check datetime values
-		
-		if (! $unlocalized) {
-			#Workaround pro polske strptime, ktere je stejne jako cs_CZ, ale nefunguje
-			if ( $self->{root}->user->locale eq 'pl_PL' ) {
-				$self->{root}->set_local_locale('cs_CZ.UTF-8');
+	} else {
+		if ( $column->{type} == DB_VARCHAR) {
+			# Now we will get internal server error instead of wrong behavior
+			$self->die("Cafe::Class::parseproperty", "You have to define opts value when using DB_VARCHAR type!", __LINE__) if ( ! defined($column->{opts}) );
+			#Check varchar values. If length of varchar value has zero AF consider value for NULL
+			$column->{ok} = 0 if ( length($value) > $column->{opts} || ( length($value) == 0 && $column->{null} !=  DB_NULL ) );
+		} elsif ( $column->{type} == DB_FMTCHAR ) {
+			#Check varchar values
+			$column->{ok} = 0 if ( ! $value =~ /$column->{opts}/ );
+		} elsif ( ( $column->{type} == DB_INT || $column->{type} == DB_INT8 ) ) {
+			#Check integer values
+			if ( ($value =~ /^\s*(-{0,1}\d+)\s*$/) ) {
+				$value = $1;
 			} else {
-				$self->{root}->set_local_locale();
+				$column->{ok} = 0
 			}
-			#Workaround pro polske strptime, ktere je stejne jako cs_CZ, ale nefunguje
+		} elsif ( $column->{type} == DB_DATE ) {
+			#Check datetime values
+			$self->{root}->set_local_locale() if ( ! $unlocalized);
+			eval { $value = Time::Piece->strptime("$value", "%x"); };
+			$column->{ok} = 0 if ( $@ );
+			$self->{root}->restore_local_locale() if (! $unlocalized);
+		} elsif ( $column->{type} == DB_DATETIMETZ) {
+			#Check datetime values
+			$self->{root}->set_local_locale() if ( ! $unlocalized);
+			eval { $value = Time::Piece->strptime("$value", "%F %T%z"); }; #2008-08-11 13:32:00+0200
+			$column->{ok} = 0 if ( $@ );
+			$self->{root}->restore_local_locale() if (! $unlocalized);
+		} elsif ( $column->{type} == DB_NUMERIC && defined($value)) {
+			#Check numeric values
+			$self->{root}->set_local_locale() if ( ! $unlocalized);
+			my $lconv = POSIX::localeconv();
+			$value =~ s/ //g;
+			if ( $lconv->{decimal_point} && ! ( $lconv->{decimal_point} eq '.' ) ) {
+				$value =~ s/\./$lconv->{decimal_point}/g;
+			}
+			my ($num, $n_unparsed) = POSIX::strtod($value);
+			$self->{root}->restore_local_locale() if (! $unlocalized);
+
+			if ( $value eq '' && $n_unparsed != 0 ) {
+				$column->{ok} = 0;
+			} else {
+				$value = $num;
+			}
 		}
-		eval { $value = Time::Piece->strptime("$value", "%x"); };
-		if ( ! $@ ) {
-			$msgid = 0;  
-		}
-		if (! $unlocalized) {
+
+		if ( ! $column->{ok} ) {
+			$self->{root}->set_local_locale();
+			$column->{message} = sprintf($self->root->getstring('Field "%s" is missing'), $self->root->getstring($column->{label}));
 			$self->{root}->restore_local_locale();
 		}
-	} elsif ( $type == DB_DATETIMETZ && defined($value)) {
-		#Check datetime values
-		$self->{root}->set_local_locale();
-		eval { $value = Time::Piece->strptime("$value", "%F %T%z"); }; #2008-08-11 13:32:00+0200
-		if ( ! $@ ) {
-			$msgid = 0;  
-		}
-		$self->{root}->restore_local_locale();
-	} elsif ( $type == DB_NUMERIC && defined($value)) {
-		#Check numeric values
-		$self->{root}->set_local_locale();
-		my $lconv = POSIX::localeconv();
-		$value =~ s/ //g;
-		if ( $lconv->{decimal_point} && ! ( $lconv->{decimal_point} eq '.' ) ) {
-			$value =~ s/\./$lconv->{decimal_point}/g;
-		}
-		my ($num, $n_unparsed) = POSIX::strtod($value);
-		$self->{root}->restore_local_locale();
-		if ( !($value eq '') && ($n_unparsed == 0) ) {
-			$msgid = 0;  
-			$value = $num;
-		}
 	}
 
-	$self->set_msgid($msgid);
+	if ( $column->{ok} ) { 
+		$self->{$destination} = $value;
+	} else {
+		$self->{$destination} = $orig;
 
-	if ( defined($msgid) && $msgid == 0 ) { 
-		if ( ref($destination) ) {
-			$destination = $value;
-		} else {
-			#If $desttination is not reference
-			#destination is value name from class
-			#we can copy this value to session
-			$self->{$destination} = $value;
-		}
+		$self->{message} = $column->{message} if ( ! $self->{message} );
+		$self->okay($column->{ok}) if ( ! $self->okay );
 	}
 
-	if ( $default_session ) {
-		if ( ! defined($self->{root}->{session}->{ref($self)}) ) {
-			$self->{root}->{session}->{ref($self)} = {};
-		}
-		if ( $type == DB_DATE && ref($self->{$destination}) eq "Time::Piece") {
+	#Save value to session if session memory is enabled
+	if ( $column->{default_session} ) {
+		$self->{root}->{session}->{ref($self)} = {} if ( ! defined($self->{root}->{session}->{ref($self)}) );
+
+		if ( $column->{type} == DB_DATE && ref($self->{$destination}) eq "Time::Piece") {
 			$self->{root}->{session}->{ref($self)}->{$destination} = $self->{$destination}->epoch();
 		} else {
 			$self->{root}->{session}->{ref($self)}->{$destination} = $self->{$destination};
 		}
 	}
 
-	return($self->{msgid});
+	return($column->{ok});
 }
 #}}}
 
@@ -995,41 +917,6 @@ sub to_time_piece {
 	$value = $self->{root}->to_time_piece($value);
 
 	return($value);
-}
-#}}}
-
-#{{{ set_msgid
-=head2 set_msgid 
-
-Set msgid to class and root data for TT2, also try join 
-msgid and key from translations and set error message.
-
-=cut 
-sub set_msgid {
-    my ( $self, $msgid ) = @_;
-	
-	if ( $msgid && $self->{msgid} == 0 ) {
-		$self->{msgid} = $msgid;
-		if ( exists($self->{_definition}->{messages}) ) {
-			if ( exists( $self->{_definition}->{messages}->{$msgid} ) && defined( $self->{_definition}->{messages}->{$msgid} ) ) {
-				$self->{message} = $self->{root}->getstring($self->{_definition}->{messages}->{$msgid});
-			} else {
-				foreach my $column ( @{$self->columns()} ) {
-					if ( $msgid == $column->{msgid} && $column->{label} ) {
-						$self->{message} = sprintf($self->root->getstring('Field "%s" contains error.'), $self->root->getstring($column->{label}));
-					}
-				}
-				$self->{message} = $self->{root}->getstring(DEFAULT_MESSAGE) . ' ' . $msgid . '.' if ! $self->{message};
-			}
-		}
-	}
-
-	if ( $msgid && ! $self->{root}->{data}->{msgid} ) {
-		$self->{root}->{data}->{msgid} = $msgid;
-		$self->{root}->{data}->{msgid_class} = ref($self);
-		$self->{root}->{data}->{message} = $self->{message};
-	}
-
 }
 #}}}
 
@@ -1114,9 +1001,7 @@ sub gethash() {
 		}
 	}
 
-	$data->{msgid} = $self->{msgid};
-	$data->{_global_msgid} = $self->{root}->{data}->{msgid};
-	$data->{message} = $self->{parent} eq $self->{root} ? $self->{root}->{data}->{message} : $self->{message};
+	$data->{message} = $self->{message};
 	$data->{stateusername} = $self->state_username;
 	$data->{state_username} = $self->state_username;
 
@@ -1324,28 +1209,8 @@ sub identifier {
 }
 #}}}
 
-#{{{check
-=head2 check
-	check istance properties
-=cut
-sub check {
-	my ($self) = @_;
-
-	#statestamp filter
-	if ( $self->{_definition}->{columns}->{statestamp} ) {
-		$self->{statestamp} = $self->{statestamp}->strftime('%x');
-	}
-	
-	foreach my $key (sort(keys(%{$self->{_definition}->{columns}}))) {
-		$self->parseproperty($self->{$key}, $key);
-	}
-
-	return( ! $self->{msgid} );
-}
-#}}}
-
-#{{{check
-=head2 check
+#{{{get_index
+=head2 get_index
 	return object index in Listing::list array
 =cut
 sub get_index {
@@ -1407,6 +1272,28 @@ sub status_remove {
 sub loaded {
 	my ($self) = @_;
 	return($self->{_loaded});
+}
+#}}}
+
+#{{{ok
+=head2 rok
+	return status parameter parsing
+=cut
+sub okay {
+	my ($self, $ok) = @_;
+	$self->{_ok} = $ok if ( defined($ok) );
+	return($self->{_ok});
+}
+#}}}
+
+#{{{message
+=head2 message
+	return global message of instance
+=cut
+sub ok {
+	my ($self, $message) = @_;
+	$self->{_message} = $message if ( defined($message) );
+	return($self->{_message});
 }
 #}}}
 

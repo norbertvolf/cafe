@@ -131,7 +131,6 @@ sub new {
 	
 	#Property initialization
 	$instance->{request} = $r; #Save request
-	$instance->{request_type} = $r->param('type') ? $r->param('type') : undef;#Save type of request type for logic classes
 	$instance->{status} = Apache2::Const::OK; #Default method
 
 	#Creating user class instance
@@ -193,94 +192,62 @@ sub controller {
 	my $r = $self->{request};
 
 	if ( $r->param('type') && $r->param('type') eq 'json' ) {
-		#Check input data
-		if($r->method ne 'POST') { die "AF error " . __FILE__ . " line " . __LINE__ . ": You must send data thru POST in json rpc." }
-		my $len  = $r->headers_in()->get('Content-length');
-		if(MAX_CONTENT_LENGTH < $len) { die "AF error " . __FILE__ . " line " . __LINE__ . ": Data is out of limit." }
-
-		my ($buf, $js);
-		while( $r->read($buf,$len) ){ $js .= $buf; }
-		#Convert json to hash
+		my $retval;
 		my $json = JSON::XS->new->utf8(0)->pretty->allow_nonref;
-		my $hash = $json->decode($js);
-
-		my $uri = "/" . $self->clean_uri( $hash->{method} );
-		$self->{method} = $uri if ( exists( $self->{methods}->{"$uri"} ) );
-		$self->{method} = $hash->{method} if ( ! $self->{method} && exists( $self->{methods}->{$hash->{method}} ) );
-
-		if ($self->{method}) {
-			my $method = $self->{methods}->{$self->{method}};
-			my $retval = &$method(@{$hash->{params}});
+		#Check input data
+		if( $r->method eq 'POST' ) {
+			my $len  = $r->headers_in()->get('Content-length');
+			$self->die("Cafe::Application::controller",  "JSON data is out of limit", __LINE__) if ( MAX_CONTENT_LENGTH < $len );
+			#Convert json to hash
+			my ($buf, $js);
+			while( $r->read($buf,$len) ){ $js .= $buf; }
+			my $hash = $json->decode($js);
+			my $method = $self->{methods}->{$self->method($hash->{method})};
+			$retval = &$method(@{$hash->{params}});
 			$retval = {
 				id     => $hash->{id},
 				result => $retval,
 				error  => undef,
 			};
-			#Remove object from $retval
 			$retval = $self->clean_struct($retval);
-			#Encode hash to json
-			$self->{data} = $json->encode($retval);
-			$self->{contenttype} = "text/plain;charset=UTF-8"; #Inititalization o contenttype from ContentType header
-			$self->{data_type} = RAW; #Initialization of raw data
-		} else {
-		    $self->{status} = Apache2::Const::NOT_FOUND;
+		} elsif ( $r->method eq 'GET' ) {
+			my $method = $self->{methods}->{$self->method($r->param('method') ? $r->param('method') : $r->uri() )};
+			$retval = &$method({%{$r->param()}});
 		}
+		#Encode hash to json
+		$self->{data} = $json->encode($retval);
+		$self->{contenttype} = "text/plain;charset=UTF-8"; #Inititalization o contenttype from ContentType header
+		$self->{data_type} = RAW; #Initialization of raw data
 	} elsif ( $r->param('type') && $r->param('type') eq 'xmlrpc' ) {
 		#Check input data
-		if($r->method ne 'POST') { die "AF error " . __FILE__ . " line " . __LINE__ . ": You must send data thru POST in xml rpc." }
+		$self->die("Cafe::Application::controller",  "XML-RPC data is not send by POST method", __LINE__) if ( $r->method ne 'POST' );
 		my $len  = $r->headers_in()->get('Content-length');
-		if(MAX_CONTENT_LENGTH < $len) { die "AF error " . __FILE__ . " line " . __LINE__ . ": Data is out of limit." }
+		$self->die("Cafe::Application::controller",  "XML-RPC data is out of limit", __LINE__) if ( MAX_CONTENT_LENGTH < $len );
 
+		#Read data from POST
 		my ($buf, $xml);
 		while( $r->read($buf,$len) ){ $xml .= $buf; }
 		$xml = Encode::encode("utf8", $xml);
-
 		$RPC::XML::ENCODING = "utf-8";
-			
-		#By default, C<smart_encode> uses heuristics to determine what encoding
-		#is required for a data type. For example, C<123> would be encoded as C<int>,
-		#where C<3.14> would be encoded as C<double>. In some situations it may be
-		#handy to turn off all these heuristics, and force encoding of C<string> on
-		#all data types encountered during encoding. Setting this flag to C<true>
-		#will do just that.
 		$RPC::XML::FORCE_STRING_ENCODING = 1;
 		
 		my $resp = RPC::XML::Parser->new()->parse($xml);
 		if (ref($resp)) { 
 			#Call method from xmlrpc
-			if (exists $self->{methods}->{$resp->name}) {
-				my @params;
-				foreach my $arg (@{$resp->args}) {
-				    push(@params, $arg->value);
-				}
-				my $method = $self->{methods}->{$resp->name}; 
-				my $retval = &$method(@params);
-				#$retval = RPC::XML::smart_encode($retval);
-				my $response = RPC::XML::response->new($retval);
-				$self->{data} = $response->as_string();
-				$self->{data_type} = RAW; #Initialization of raw data
-			} else {
-				$self->{status} = Apache2::Const::NOT_FOUND;
+			my @params;
+			foreach my $arg (@{$resp->args}) {
+				push(@params, $arg->value);
 			}
+			my $method = $self->{methods}->{$self->method($resp->name)}; 
+			my $retval = &$method(@params);
+			#$retval = RPC::XML::smart_encode($retval);
+			my $response = RPC::XML::response->new($retval);
+			$self->{data} = $response->as_string();
+			$self->{data_type} = RAW; #Initialization of raw data
 		}
 	} else {
-		my $method = undef;
-		#Find called method from client
-		if ( $r->param('method') && exists( $self->{methods}->{$r->param('method')} ) ) {
-			$method = $self->{methods}->{$r->param('method')};
-			$self->{method} = $r->param('method');
-		} elsif ( $self->dir_config('uri_base') ) { 
-			my $uri = "/" . $self->clean_uri( $r->uri() );
-			$method = $self->{methods}->{"$uri"} if ( exists( $self->{methods}->{"$uri"} ) );
-		}
-
-		#Call method
-		if ( $method ) {
-			&$method();
-		} else {
-			$self->log("Method on uri " . $r->uri() . " not found.");
-			$self->{status}	= Apache2::Const::NOT_FOUND;
-		}
+		my $method = $self->{methods}->{$self->method($r->param('method') ? $r->param('method') : $r->uri() )};
+		&$method($r->param() ? {%{$r->param()}} : undef );
 	}
 	#Save session data
 	$self->{session}->{time} = time();
@@ -459,8 +426,7 @@ sub rpc_set {
 		my $obj;
 		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@"; 
 		eval('$obj = new ' . $class . '($self, $self);') or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-		$obj->rules($hash);
-		if ( $obj->{root}->{data}->{msgid} == 0 ) { $obj->save(); }
+		$obj->save() if ( $obj->rules($hash) );
 		return($obj->gethash());
 	} else {
 		$self->{status} = Apache2::Const::FORBIDDEN;
@@ -1070,16 +1036,6 @@ sub template {
 	#Save manually set template 
 	$self->{template} = $template if ( $template );
 
-	#Try found classic method template
-	if ( ! $self->{template} ) {
-		foreach my $path ( $self->template_paths() ) {
-			if ( -f "$path/$self->{method}.tt2" ) {
-				$self->{template} = "$self->{method}.tt2";
-				last;	
-			}
-		}
-	}
-
 	#Try found route template
 	if ( ! $self->{template} && $self->dir_config('uri_base') ) {
 			foreach my $path ( $self->template_paths() ) {
@@ -1089,10 +1045,31 @@ sub template {
 				}
 			}
 	}
-
 	die "Cafe framework: Template not found for " . $self->clean_uri( $self->{request}->uri() ) . "." if ( ! $self->{template} );
 
 	return($self->{template});
 }
 #}}}
+
+#{{{ method
+=head2 method
+
+get/set method to define callback function from methods routing hash
+
+=cut
+sub method {
+	my ($self, $method) = @_;
+
+	if ( $method ) {
+		if ( $method =~ /\// ) {
+			my $uri = "/" . $self->clean_uri( $method );
+			$self->{_method} = $uri if ( exists( $self->{methods}->{"$uri"} ) );
+		}
+		$self->{_method} = $method if ( ! $method && exists( $self->{methods}->{$method} ) );
+		$self->die("Cafe::Application::method",  "Method not found", __LINE__) if ( ! $self->{_method} );
+	}
+	return($self->{_method});
+}
+#}}}
+
 1;

@@ -144,7 +144,6 @@ sub new {
 		if ( ! exists( $instance->{_definition}->{columns}->{perpage}) ) {
 			$instance->{_definition}->{columns}->{perpage} =  {
 				type => Cafe::Class::DB_INT,
-				msgid => 1024,
 				null => Cafe::Class::DB_NULL,
 				rule => 1,
 				default_session => 1,
@@ -155,7 +154,6 @@ sub new {
 		if ( ! exists( $instance->{_definition}->{columns}->{position}) ) {
 			$instance->{_definition}->{columns}->{position} =  {
 				type => Cafe::Class::DB_INT,
-				msgid => 1025,
 				null => Cafe::Class::DB_NULL,
 				rule => 1,
 				default_session => 1,
@@ -218,7 +216,6 @@ sub is_pager {
 #vypocitavat parametry perpage a position
 sub rules {
 	my ( $self, $content ) = @_;
-	my ( $retval) = 0;
 	my (%content);
 	my ( $perpage, $position );
 
@@ -246,7 +243,8 @@ sub rules {
 	$self->default_session("orderby", $self->{orderby});
 
 	#Udelat nad columns kontrolu spravnosti a zapsat do sessions
-	$self->SUPER::rules($content);
+	my $retval = $self->SUPER::rules($content);
+
 	#Parse orderby commands from client
 	if ( exists($content->{orderby}) ) {
 		my $orderby = $content->{orderby};
@@ -280,7 +278,7 @@ sub rules {
 	}
 	$self->{root}->{session}->{ref($self)}->{orderby} = $self->{orderby};
 
-	return(!$self->{msgid});
+	return($retval);
 }
 #}}}
 
@@ -775,23 +773,6 @@ sub clear_cache {
 	}
 
 	return($self->{list});
-}
-#}}}
-
-#{{{ check
-=head2 check
-	check instances in list
-=cut
-sub check {
-	my ($self) = @_;
-
-	foreach my $item (@{$self->{list}} ) {
-		if ( ! $item->check() ) {
-			return 0;
-		}
-	}
-
-	return 1;
 }
 #}}}
 
