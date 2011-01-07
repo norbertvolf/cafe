@@ -185,7 +185,7 @@ sub getstring {
 			$retval = "$key";
 		}
 	} else {
-			die "Error Cafe::Base::getstring : Not defined key in getstring function. (line " . __LINE__ . ")\n";
+		$self->die("Cafe::Base::getstring", "Not defined parameter key in getstring function", __LINE__);
 	}
 
 	if ( $encoding ) {
