@@ -166,9 +166,6 @@ foreach my $level1 (@{$definition->{columns}}) {
 		$output .= "\t\t\t\t\tsequence => '$level1->{sequence}',\n";
 	}
 	$output .= "\n";
-	if ( exists ($level1->{msgid}) ) {
-		$output .= "\t\t\t\t\tmsgid => $level1->{msgid},\n";
-	}
 	if ( exists ($level1->{label}) ) {
 		$output .= "\t\t\t\t\tlabel => '$level1->{label}',\n";
 	}
