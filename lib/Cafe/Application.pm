@@ -1065,8 +1065,8 @@ sub method {
 			my $uri = "/" . $self->clean_uri( $method );
 			$self->{_method} = $uri if ( exists( $self->{methods}->{"$uri"} ) );
 		}
-		$self->{_method} = $method if ( ! $method && exists( $self->{methods}->{$method} ) );
-		$self->die("Cafe::Application::method",  "Method not found", __LINE__) if ( ! $self->{_method} );
+		$self->{_method} = $method if ( ! $self->{_method} && exists( $self->{methods}->{$method} ) );
+		$self->die("Cafe::Application::method",  "Method '$method' not found", __LINE__) if ( ! $self->{_method} );
 	}
 	return($self->{_method});
 }
