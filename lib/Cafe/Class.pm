@@ -1106,7 +1106,11 @@ sub AUTOLOAD {
 						$id[$i] =~ s/ $//g;
 						$ref[$i] =~ s/ $//g;
 
-						if ( $ref[$i] =~ /\$self->/ ) {
+						if ( $ref[$i] =~ /('[^']+'|\d+)/ ) {
+							my $destination = '$obj->{$id[$i]}';
+							my $source = $1;
+							eval("$destination = $source") or $self->die("Cafe::Class::AUTLOADER", "bad AUTOLOAD assignment \$obj->{$id[$i]} = $1 with error : $!", __LINE__);
+						} elsif ( $ref[$i] =~ /\$self->/ ) {
 							my $destination = '$obj->{$id[$i]}';
 							my $source = $ref[$i];
 							eval("$destination = $source") or $self->die("Cafe::Class::AUTLOADER", "bad AUTOLOAD assignment \$obj->{$id[$i]} = \$self->{$ref[$i]} with error : $!", __LINE__);
