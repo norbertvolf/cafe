@@ -213,12 +213,10 @@ sub new {
 		\$parent,
 		$output
 	); 
-	bless(\$instance);
 
-	if ( \$$primarykey ) {
-		\$instance->{$primarykey} = \$$primarykey;
-		\$instance->load();	
-	}
+	bless(\$instance);
+	\$instance->{$primarykey} = \$$primarykey if ( \$$primarykey );
+	\$instance->load() if ( \$$primarykey );	
 	return \$instance
 }
 
