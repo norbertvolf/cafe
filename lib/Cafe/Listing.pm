@@ -415,16 +415,20 @@ sub load {
 			if ( exists($self->definition->{query}) ) {
 				$query = new Cafe::NamedQuery($self->dbh, $self->definition()->{query});
 			} else {
-				die "Error Cafe::Listing::load : Value for key \"query\" in definition doesn't exist. (" . __LINE__ . ")\n";
+				$self->die("Cafe::Listing::load",  "Value for key \"query\" in definition doesn't exist.", __LINE__);
 			}
 
 			$query->orderby($self->{orderby});
 			$query->bind_params($self->{params});
 
 			$query->sth()->{pg_server_prepare} = 0;
-			$self->dbh->{RaiseError} = 1; 
-			$query->sth()->execute() or die "Error Cafe::Listing::load : $! in $query->{query}->{sql} (line " . __LINE__ . ")";
-			$self->dbh->{RaiseError} = 0; 
+			my $RaiseError = $self->dbh->{RaiseError};
+	 		$self->dbh->{RaiseError} = 0; 
+			if ( ! $query->sth()->execute() ) { 
+				print(STDERR "\n-- SQL Query --\n$query->{query}->{sql}\n-- SQL Error --\n" . $self->dbh->errstr);
+				$self->die("Cafe::Listing::load",  "SQL Query error see above", __LINE__);
+			}
+			$self->dbh->{RaiseError} = $RaiseError; 
 
 			$values = [];
 			while ( $row = $query->sth()->fetchrow_hashref() ) {
@@ -867,6 +871,19 @@ sub url {
 }
 #}}}
 
+#{{{identifier
+=head2 Method identifier
+
+Return string identify class
+
+=cut 
+sub identifier {
+	my ($self, $identifier) = @_;
+	$self->SUPER::identifier($identifier);
+	$self->SUPER::identifier(lc($1)) if ( ! defined($self->{_identifier}) && ref($self) =~ /([a-zA-Z_]+)$/ );
+	return($self->SUPER::identifier);
+}
+#}}}
 
 sub DESTROY {
 	my ($self) = @_;
