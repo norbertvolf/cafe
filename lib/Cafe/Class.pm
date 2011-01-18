@@ -705,9 +705,7 @@ sub save_type {
 	} elsif ( scalar(@primary_keys) > 1 ) { #Slozeny primarni klic
 		#Kontrola, ze jsou vyplneny vsechny sloupce primarniho klice
 		foreach $key (@{$self->primary_keys()}) {
-			if ( ! defined($self->{$key}) ) {
-				die "AF error " . __FILE__ . " line " . __LINE__ . ": If you want write record with not-simple primary key every columns of primary key must by definded";
-			}
+			$self->die("Cafe::Class::save_type", "If you want write record with not-simple primary key every columns of primary key must by definded", __LINE__) if ( ! defined($self->{$key}) );
 		}
 		#Zkontrolujeme jestli existuje zaznam se slozenym primarnim klicem v databazi
 		$sql = "SELECT * FROM $self->{_definition}->{name} WHERE " . $self->primary_where();
@@ -1207,7 +1205,7 @@ sub identifier {
 		if ( ref($self) =~ /([a-zA-Z_]+)$/ ) {
 			$self->{_identifier} = lc($1);
 		}
-		$self->{_identifier} = join("_", $self->{_identifier}, @{$self->primary_values()}) if ( scalar(@{$self->primary_values()}) );
+		$self->{_identifier} = join("_", $self->{_identifier}, grep( defined($_), @{$self->primary_values()} ) ) if ( scalar( grep( defined($_), @{$self->primary_values()}) ) );
 	}
 	return($self->{_identifier});
 }
