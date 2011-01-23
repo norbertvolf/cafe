@@ -81,7 +81,6 @@ sub tmpl {
 					DB_DATE  => Cafe::Class::DB_DATE,
 					DB_NUMERIC  => Cafe::Class::DB_NUMERIC,
 					DB_FMTCHAR   => Cafe::Class::DB_FMTCHAR,
-					DB_REGEX  => Cafe::Class::DB_REGEX,
 				}
 			},
 		);
