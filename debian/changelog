@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.6-1) stable; urgency=low
+
+  * Cafe::Class add message management
+
+ -- Norbert Volf <norbert@volf.eu>  Sun, 23 Jan 2011 16:58:08 +0100
+
 libcafe-application-perl (0.8.5-1) stable; urgency=low
 
   * Cafe::Export If connection key in definition is not defined, 
