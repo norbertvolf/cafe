@@ -12,13 +12,14 @@ use constant {
 	DB_DATE  => 2,
 	DB_NUMERIC  => 3,
 	DB_FMTCHAR   => 4,
-	DB_REGEX  => 5,
 	DB_INT8   => 6,
 	DB_NULL  => 7,
 	DB_NOTNULL  => 8,
 	DB_DATETIMETZ  => 9, #2008-08-11 13:30:00.9990+0200
-	AF2_TTL => 300,
-	DEFAULT_MESSAGE => 'Undocumented error number',
+	CAFE_TTL => 300,
+	NOTRANSLATE => 1,
+	OK => 1,
+	NOK => 0,
 };
 use POSIX;
 use Time::Piece;
@@ -233,7 +234,7 @@ sub new {
 	#Set defalut values
 	$instance->{message} = "";
 	$instance->{_loaded} = 0;
-	$instance->{_ok} = 1;
+	$instance->{_ok} = OK;
 	$instance->{_definition} = {};
 	$instance->{root} = $root;
 	$instance->{parent} = $parent;
@@ -263,6 +264,12 @@ sub new {
 			$column->{select}->{method} = $root->rich_uri($column->{select}->{method}) if ( exists($column->{select}) && exists($column->{select}->{method}));
 		}
 	}
+	if ( exists($instance->{_definition}->{autoloaders}) ) {
+		#Enable translate as default
+		foreach my $key (sort(keys(%{$instance->{_definition}->{autoloaders}}))) {
+			$instance->{_definition}->{autoloaders}->{$key}->{translate} = 1 if ( ! defined($instance->{_definition}->{autoloaders}->{$key}->{translate}) );
+		}
+	}
 
 	if ( exists($instance->{_definition}->{form}) ) {
 		my $form = $instance->{_definition}->{form};
@@ -279,7 +286,7 @@ sub new {
 	$instance->{statestamp} = localtime();
 
 	if ( ! defined($instance->{_definition}->{ttl}) ) {
-		$instance->{_definition}->{ttl} = AF2_TTL;
+		$instance->{_definition}->{ttl} = CAFE_TTL;
 	}
 
 	return $instance;
@@ -856,7 +863,7 @@ sub parseproperty {
 	} else {
 		$self->{$destination} = $orig;
 
-		$self->{message} = $column->{message} if ( ! $self->{message} );
+		$self->message($column->{message}, NOTRANSLATE);
 		$self->okay($column->{ok}) if ( ! $self->okay );
 	}
 
@@ -999,7 +1006,8 @@ sub gethash() {
 		}
 	}
 
-	$data->{message} = $self->{message};
+	$data->{message} = $self->message;
+	$data->{okay} = $self->okay;
 	$data->{stateusername} = $self->state_username;
 	$data->{state_username} = $self->state_username;
 
@@ -1277,8 +1285,8 @@ sub loaded {
 }
 #}}}
 
-#{{{ok
-=head2 rok
+#{{{okay
+=head2 okay
 	return status parameter parsing
 =cut
 sub okay {
@@ -1292,9 +1300,17 @@ sub okay {
 =head2 message
 	return global message of instance
 =cut
-sub ok {
-	my ($self, $message) = @_;
-	$self->{_message} = $message if ( defined($message) );
+sub message {
+	my ($self, $message, $notranslate) = @_;
+	if ( defined($message) ) {
+		if ( $notranslate ) {
+			$self->{_message} = $message;
+		} else {
+			$self->root->set_local_locale();
+			$self->{_message} = $self->root->getstring($message);
+			$self->root->restore_local_locale();
+		}
+	}
 	return($self->{_message});
 }
 #}}}
