@@ -422,13 +422,12 @@ sub load {
 			$query->bind_params($self->{params});
 
 			$query->sth()->{pg_server_prepare} = 0;
-			my $RaiseError = $self->dbh->{RaiseError};
-	 		$self->dbh->{RaiseError} = 0; 
-			if ( ! $query->sth()->execute() ) { 
-				print(STDERR "\n-- SQL Query --\n$query->{query}->{sql}\n-- SQL Error --\n" . $self->dbh->errstr);
+
+			eval { $query->sth()->execute() };
+			if ($@) {
+				print(STDERR "\n-- SQL Query --\n$query->{query}->{sql}\n-- SQL Error --\n$@");
 				$self->die("Cafe::Listing::load",  "SQL Query error see above", __LINE__);
 			}
-			$self->dbh->{RaiseError} = $RaiseError; 
 
 			$values = [];
 			while ( $row = $query->sth()->fetchrow_hashref() ) {
@@ -884,6 +883,21 @@ sub identifier {
 	return($self->SUPER::identifier);
 }
 #}}}
+
+#{{{ list
+=head2 list
+
+	Get/Set list of values
+
+=cut
+sub list {
+	my $self = shift;
+	my $list = shift;
+	$self->{list} = $list if ( defined($list) && ref($list) eq 'ARRAY');
+	return($self->{list});
+}
+#}}}
+
 
 sub DESTROY {
 	my ($self) = @_;
