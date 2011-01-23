@@ -1,5 +1,8 @@
 Revision history for Cafe
 
+0.86    2011-01-23
+        add message management
+
 0.85    2010-10-26
         Cafe::Export If connection key in definition is not defined, 
 	constructor ignore preparing connection 
