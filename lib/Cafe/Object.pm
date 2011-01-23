@@ -22,7 +22,8 @@ sub new {
 sub die {
 	my ($self, $sub, $msg, $line) = @_;
 	$self->print_stack;
-	die"Error $sub : $msg. (line $line)";
+	my $message = "Error $sub : $msg." . ($line ? " (line $line)" : "");
+	die $message;
 }
 #}}}
 
