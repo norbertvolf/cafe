@@ -193,13 +193,23 @@ sub config_location {
 					my %hash = $loc->cmd_config_hash('PerlSetVar');
 					$self->{_config_hash} = \%hash; 
 				} else {
-					die "AF error " . __FILE__ . " line " . __LINE__ . ": Cannot found location $self->{_conf_location}.";
+					$self->die("Cafe::Apache::config_location",  "Cannot found location $self->{_conf_location}.", __LINE__);
 				}
 			} else {
-				die "AF error " . __FILE__ . " line " . __LINE__ . ": Cannot found IfModule directive with mod_perl.c value.";
+				$self->die("Cafe::Apache::config_location",  "Cannot found IfModule directive with mod_perl.c value.", __LINE__);
+			}
+		} elsif ( $ac->cmd_config("IfModule") ) {
+			my $md = $ac->cmd_context(IfModule => 'mod_perl.c');
+			my $loc = $md->cmd_context(Location => $self->{_conf_location});
+			if ( ref($loc) eq 'Apache::ConfigFile' ) { 
+				my %hash = $loc->cmd_config_hash('PerlSetVar');
+				$self->{_config_hash} = \%hash; 
+			} else {
+				$self->die("Cafe::Apache::config_location",  "Cannot found location $self->{_conf_location}.", __LINE__);
 			}
 		} else {
 			die "AF error " . __FILE__ . " line " . __LINE__ . ": Cannot found VirtualHost directive.";
+			$self->die("Cafe::Apache::config_location",  "Cannot found VirtualHost or IfModule directive.", __LINE__);
 		}
 	}
 	return($self->{_config_hash});

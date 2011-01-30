@@ -507,7 +507,6 @@ sub rich_uri {
 	my ($self, $uri) = @_;
 
 	return if ( ! $uri );
-
 	if ( $self->dir_config('uri_base')) {
 		my $uri_base = $self->dir_config('uri_base');
 		my $uri = $self->clean_uri($uri);
