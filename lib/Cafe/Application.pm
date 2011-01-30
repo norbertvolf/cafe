@@ -699,7 +699,7 @@ sub class_print {
 		if ( $format ) {
 			my @values;
 			foreach my $column (@columns) {
-				push(@values, $obj->{$column});
+				eval(qq( push(\@values, \$obj->$column) ));
 			}
 			$self->{filename} = sprintf($format, @values);
 		}
