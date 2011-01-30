@@ -1,3 +1,10 @@
+libcafe-application-perl (0.8.7-1) stable; urgency=low
+
+  * Search definition without VirtualHost directive
+  * Create filename in class_print from methods not directly from instance hash
+
+ -- Norbert Volf <norbert@volf.eu>  Sun, 30 Jan 2011 23:16:08 +0100
+
 libcafe-application-perl (0.8.6-1) stable; urgency=low
 
   * Cafe::Class add message management
