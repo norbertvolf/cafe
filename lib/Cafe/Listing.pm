@@ -898,9 +898,4 @@ sub list {
 }
 #}}}
 
-
-sub DESTROY {
-	my ($self) = @_;
-}
-
 1;

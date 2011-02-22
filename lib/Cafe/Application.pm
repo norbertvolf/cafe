@@ -5,7 +5,7 @@ use base qw(Cafe::Base);
 
 use constant MAX_CONTENT_LENGTH => 1024 * 1024 * 5; # 5M
 use constant RAW => 0;
-our $VERSION = '0.87';
+our $VERSION = '0.88';
 
 use Carp;
 use Apache2::Const -compile => qw(OK FORBIDDEN NOT_FOUND SERVER_ERROR REDIRECT);
@@ -955,6 +955,7 @@ sub rpc_listing_view {
 			$instance = lc($1); 
 		}
 		$self->{data}->{"$instance"} = $obj;
+		$self->{data}->{listing} = $obj;
 
 		#Add getstring function
 		$self->{data}->{getstring} = sub { $self->getstring(@_); };
