@@ -8,6 +8,7 @@ WriteMakefile(
 	VERSION_FROM        => 'lib/Cafe/Application.pm',
 	ABSTRACT_FROM       => 'lib/Cafe/Application.pm',
 	PL_FILES            => {},
+	EXE_FILES    => [ qw(bin/pgbuilder.pl) ],
 	PREREQ_PM => {
 		'Test::More' => 0,
 		'Apache2::Const' => 0,
