@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.8-1) stable; urgency=low
+
+  * Add listing value to stash in rpc_listing_viem
+
+ -- Norbert Volf <norbert@volf.eu>  Sun, 30 Jan 2011 23:16:08 +0100
+
 libcafe-application-perl (0.8.7-1) stable; urgency=low
 
   * Search definition without VirtualHost directive
