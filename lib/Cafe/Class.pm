@@ -811,11 +811,19 @@ sub parseproperty {
 			$self->die("Cafe::Class::parseproperty", "You have to define opts value when using DB_VARCHAR type!", __LINE__) if ( ! defined($column->{opts}) );
 			#Check varchar values. If length of varchar value has zero AF consider value for NULL
 			$column->{ok} = 0 if ( length($value) > $column->{opts} || ( length($value) == 0 && $column->{null} !=  DB_NULL ) );
-			$column->{changed}= 1 if ( ! $column->{$destination} eq $value );
+			$column->{changed}= 1 if ( 
+				( ! defined( $column->{$destination} ) && defined($value) ) ||
+				( defined( $column->{$destination} ) && ! defined($value) ) ||
+				( defined( $column->{$destination} ) && defined($value) && ! $column->{$destination} eq $value )
+			);
 		} elsif ( $column->{type} == DB_FMTCHAR ) {
 			#Check varchar values
 			$column->{ok} = 0 if ( ! $value =~ /$column->{opts}/ );
-			$column->{changed}= 1 if ( ! $column->{$destination} eq $value );
+			$column->{changed}= 1 if ( 
+				( ! defined( $column->{$destination} ) && defined($value) ) ||
+				( defined( $column->{$destination} ) && ! defined($value) ) ||
+				( defined( $column->{$destination} ) && defined($value) && ! $column->{$destination} eq $value )
+			);
 		} elsif ( ( $column->{type} == DB_INT || $column->{type} == DB_INT8 ) ) {
 			#Check integer values
 			if ( ($value =~ /^\s*(-{0,1}\d+)\s*$/) ) {
@@ -823,21 +831,33 @@ sub parseproperty {
 			} else {
 				$column->{ok} = 0
 			}
-			$column->{changed}= 1 if ( $column->{$destination} != $value );
+			$column->{changed}= 1 if ( 
+				( ! defined( $column->{$destination} ) && defined($value) ) ||
+				( defined( $column->{$destination} ) && ! defined($value) ) ||
+				( defined( $column->{$destination} ) && defined($value) && $column->{$destination} != $value )
+			);
 		} elsif ( $column->{type} == DB_DATE ) {
 			#Check datetime values
 			$self->{root}->set_local_locale() if ( ! $unlocalized);
 			eval { $value = Time::Piece->strptime("$value", "%x"); };
 			$column->{ok} = 0 if ( $@ );
 			$self->{root}->restore_local_locale() if (! $unlocalized);
-			$column->{changed}= 1 if ( $column->{$destination} != $value );
+			$column->{changed}= 1 if ( 
+				( ! defined( $column->{$destination} ) && defined($value) ) ||
+				( defined( $column->{$destination} ) && ! defined($value) ) ||
+				( defined( $column->{$destination} ) && defined($value) && $column->{$destination} != $value )
+			);
 		} elsif ( $column->{type} == DB_DATETIMETZ) {
 			#Check datetime values
 			$self->{root}->set_local_locale() if ( ! $unlocalized);
 			eval { $value = Time::Piece->strptime("$value", "%F %T%z"); }; #2008-08-11 13:32:00+0200
 			$column->{ok} = 0 if ( $@ );
 			$self->{root}->restore_local_locale() if (! $unlocalized);
-			$column->{changed}= 1 if ( $column->{$destination} != $value );
+			$column->{changed}= 1 if ( 
+				( ! defined( $column->{$destination} ) && defined($value) ) ||
+				( defined( $column->{$destination} ) && ! defined($value) ) ||
+				( defined( $column->{$destination} ) && defined($value) && $column->{$destination} != $value )
+			);
 		} elsif ( $column->{type} == DB_NUMERIC && defined($value)) {
 			#Check numeric values
 			$self->{root}->set_local_locale() if ( ! $unlocalized);
@@ -854,7 +874,11 @@ sub parseproperty {
 			} else {
 				$value = $num;
 			}
-			$column->{changed}= 1 if ( $column->{$destination} != $value );
+			$column->{changed}= 1 if ( 
+				( ! defined( $column->{$destination} ) && defined($value) ) ||
+				( defined( $column->{$destination} ) && ! defined($value) ) ||
+				( defined( $column->{$destination} ) && defined($value) && $column->{$destination} != $value )
+			);
 		}
 
 		if ( ! $column->{ok} ) {
@@ -1016,6 +1040,8 @@ sub gethash() {
 	$data->{okay} = $self->okay;
 	$data->{stateusername} = $self->state_username;
 	$data->{state_username} = $self->state_username;
+	$data->{global} = {}; 
+	$data->{global}->{message} = $self->root->message; 
 
 	return($data);
 }
@@ -1133,7 +1159,7 @@ sub AUTOLOAD {
 
 					}
 				} elsif ( exists($autoloader->{id}) ) {
-					foreach my $id (split(/,/, $autoloader->{id})) {
+					foreach my $id (map { s/ //g; $_} split(/,/, $autoloader->{id})) {
 						eval('$obj->{$id} = $self->{$id}');
 					}
 				}
@@ -1304,7 +1330,7 @@ sub okay {
 
 #{{{message
 =head2 message
-	return global message of instance
+	get/set global/local message of instance
 =cut
 sub message {
 	my ($self, $message, $notranslate) = @_;
@@ -1316,6 +1342,7 @@ sub message {
 			$self->{_message} = $self->root->getstring($message);
 			$self->root->restore_local_locale();
 		}
+		$self->root->message($message, $notranslate);
 	}
 	return($self->{_message});
 }
