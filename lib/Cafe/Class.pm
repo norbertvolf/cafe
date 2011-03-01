@@ -811,9 +811,11 @@ sub parseproperty {
 			$self->die("Cafe::Class::parseproperty", "You have to define opts value when using DB_VARCHAR type!", __LINE__) if ( ! defined($column->{opts}) );
 			#Check varchar values. If length of varchar value has zero AF consider value for NULL
 			$column->{ok} = 0 if ( length($value) > $column->{opts} || ( length($value) == 0 && $column->{null} !=  DB_NULL ) );
+			$column->{changed}= 1 if ( ! $column->{$destination} eq $value );
 		} elsif ( $column->{type} == DB_FMTCHAR ) {
 			#Check varchar values
 			$column->{ok} = 0 if ( ! $value =~ /$column->{opts}/ );
+			$column->{changed}= 1 if ( ! $column->{$destination} eq $value );
 		} elsif ( ( $column->{type} == DB_INT || $column->{type} == DB_INT8 ) ) {
 			#Check integer values
 			if ( ($value =~ /^\s*(-{0,1}\d+)\s*$/) ) {
@@ -821,18 +823,21 @@ sub parseproperty {
 			} else {
 				$column->{ok} = 0
 			}
+			$column->{changed}= 1 if ( $column->{$destination} != $value );
 		} elsif ( $column->{type} == DB_DATE ) {
 			#Check datetime values
 			$self->{root}->set_local_locale() if ( ! $unlocalized);
 			eval { $value = Time::Piece->strptime("$value", "%x"); };
 			$column->{ok} = 0 if ( $@ );
 			$self->{root}->restore_local_locale() if (! $unlocalized);
+			$column->{changed}= 1 if ( $column->{$destination} != $value );
 		} elsif ( $column->{type} == DB_DATETIMETZ) {
 			#Check datetime values
 			$self->{root}->set_local_locale() if ( ! $unlocalized);
 			eval { $value = Time::Piece->strptime("$value", "%F %T%z"); }; #2008-08-11 13:32:00+0200
 			$column->{ok} = 0 if ( $@ );
 			$self->{root}->restore_local_locale() if (! $unlocalized);
+			$column->{changed}= 1 if ( $column->{$destination} != $value );
 		} elsif ( $column->{type} == DB_NUMERIC && defined($value)) {
 			#Check numeric values
 			$self->{root}->set_local_locale() if ( ! $unlocalized);
@@ -849,6 +854,7 @@ sub parseproperty {
 			} else {
 				$value = $num;
 			}
+			$column->{changed}= 1 if ( $column->{$destination} != $value );
 		}
 
 		if ( ! $column->{ok} ) {
@@ -1184,13 +1190,13 @@ sub columns {
 	my ($self) = @_;
 	my @columns;
 	foreach my $key (keys(%{$self->definition->{columns}})) {
-		if ( $self->definition->{columns}->{$key}->{position} ) {
+		if ( defined($self->definition->{columns}->{$key}->{position}) ) {
 			$self->definition->{columns}->{$key}->{key} = $key;
 			push(@columns, $self->definition->{columns}->{$key});		
 		}
 	}
 	foreach my $key (keys(%{$self->definition->{autoloaders}})) {
-		if ( $self->definition->{autoloaders}->{$key}->{position} ) {
+		if ( defined($self->definition->{autoloaders}->{$key}->{position}) ) {
 			$self->definition->{autoloaders}->{$key}->{key} = $key;
 			push(@columns, $self->definition->{autoloaders}->{$key});		
 		}
