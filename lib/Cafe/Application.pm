@@ -79,21 +79,22 @@ sub DESTROY {
 
 =head1 DESCRIPTION
 
-Cafe::Application is a new module based on the Apache::Application module
-on AFv1. Users now don't need define handler. All configuration is in apache
+Users now don't need define handler. All configuration is in apache
 configuration files.
 
 =head1 Cafe::Application
 
 Cafe::Application - Method for handle client requests bussines logic classes
 
+#}}}
+
+#{{{ handler
 =head2 handler()
 
 Join application as Apache module to web server
 
 =cut
 sub handler : method {
-#{{{
 	my ($class, $r) = @_;
 	my $app;
 	my $req = Apache2::Request->new($r);
@@ -105,7 +106,6 @@ sub handler : method {
 
 	$app->clean();
 	return($app->{status});
-#}}}
 }
 #}}}
 
@@ -246,8 +246,15 @@ sub controller {
 			$self->{data_type} = RAW; #Initialization of raw data
 		}
 	} else {
-		my $method = $self->{methods}->{$self->method($r->param('method') ? $r->param('method') : $r->uri() )};
-		&$method($r->param() ? {%{$r->param()}} : undef );
+		my $method;
+		eval {
+			$method = $self->{methods}->{$self->method($r->param('method') ? $r->param('method') : $r->uri() )};
+		};
+		if ( $@ ) {
+			$self->{status} = Apache2::Const::NOT_FOUND;
+		} else {
+			&$method($r->param() ? {%{$r->param()}} : undef );
+		}
 	}
 	#Save session data
 	$self->{session}->{time} = time();
