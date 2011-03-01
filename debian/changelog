@@ -1,3 +1,13 @@
+libcafe-application-perl (0.8.9-1) stable; urgency=low
+
+  * add global message capability
+  * move set_local_locale to Base class
+  * sent NOT_FOUND instead of die if method no exists
+  * add changed parameter to Class.pm
+  * add find method to Listing class (make getbyproperty OBSOLETE)
+
+ -- Norbert Volf <norbert@volf.eu>  Tue, Mar 1 23:16:00 2011 +0100
+
 libcafe-application-perl (0.8.8-1) stable; urgency=low
 
   * Add listing value to stash in rpc_listing_viem
