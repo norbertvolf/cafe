@@ -188,9 +188,7 @@ filter section.
 sub is_filter {
 	my ($self) = @_;
 	my $cnt = 0;
-	if ( $self->columns() ) {
-		$cnt = grep { $_->{rule} } @{$self->columns()};	
-	}
+	$cnt = scalar(grep { $_->{rule} } @{$self->columns()}) if ( $self->columns() );
 	return($cnt);
 };
 #}}}
@@ -895,6 +893,30 @@ sub list {
 	my $list = shift;
 	$self->{list} = $list if ( defined($list) && ref($list) eq 'ARRAY');
 	return($self->{list});
+}
+#}}}
+
+#{{{ find
+=head2 Method find
+
+Return element where property value is same as parameter
+
+=head3 Parameters
+
+=over 
+
+=item $property - name of column from $self->lis}
+
+=item value - value for condition
+
+=back 
+
+=cut
+sub find {
+	my ($self, $property, $value) = @_;
+	my @arr = grep { $_->{$property} eq $value } @{$self->{list}};
+	return( $arr[0] ) if ( scalar(@arr) == 1 );
+	return( \@arr ) if ( scalar(@arr) > 1 );
 }
 #}}}
 
