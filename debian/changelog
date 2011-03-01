@@ -6,7 +6,7 @@ libcafe-application-perl (0.8.9-1) stable; urgency=low
   * add changed parameter to Class.pm
   * add find method to Listing class (make getbyproperty OBSOLETE)
 
- -- Norbert Volf <norbert@volf.eu>  Tue, Mar 1 23:16:00 2011 +0100
+ -- Norbert Volf <norbert@volf.eu>  Tue, 1 Mar 2011 23:16:00 +0100
 
 libcafe-application-perl (0.8.8-1) stable; urgency=low
 
