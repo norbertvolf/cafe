@@ -341,36 +341,6 @@ sub clean {
 }
 #}}}
 
-#{{{set_local_locale
-=head2 set_local_locale
-
-Set locale and save original locale to LIFO. If $locale
-is not defined try get locale from class_user. Be carefull
-$locale must se same se generated locale in system (with or 
-without charset it depends).
-
-=over
-
-=item $locale - requested locale
-
-=back
-
-=cut
-sub set_local_locale {
-	my ($self, $locale) = @_;
-
-	if ( ! $locale ) { 
-		$locale = "C"; 
-		if ( $self->{user} ) {
-			$locale = $self->{user}->locale() . "." . $self->{user}->charset();
-		}
-	}   
-	if ( ! $self->{local_locale} ) { $self->{local_locale} = []; }   
-	setlocale( POSIX::LC_ALL, $locale );
-	push ( @{$self->{local_locale}}, $locale );
-}
-#}}}
-
 #{{{rpc_del
 =head2 rpc_del()
 
@@ -1079,5 +1049,4 @@ sub method {
 	return($self->{_method});
 }
 #}}}
-
 1;
