@@ -15,6 +15,7 @@ use constant {
 	DB_INT8   => 6,
 	DB_NULL  => 7,
 	DB_NOTNULL  => 8,
+	DB_FULLTEXT  => 10,
 	DB_DATETIMETZ  => 9, #2008-08-11 13:30:00.9990+0200
 	CAFE_TTL => 300,
 	NOTRANSLATE => 1,
@@ -195,7 +196,6 @@ option in apache configureation to enable memcaching:
 
 =head1 METHODS
 #}}}
-
 #{{{ new
 #{{{
 =head2 new()
@@ -292,7 +292,6 @@ sub new {
 	return $instance;
 }
 #}}}
-
 #{{{ default_session
 =head2 default_session()
 
@@ -315,7 +314,6 @@ sub default_session {
 	}
 }
 #}}}
-
 #{{{ definition
 =head2 definition
 
@@ -327,7 +325,6 @@ sub definition {
 	return($self->{_definition});
 }
 #}}}
-
 #{{{ load
 =head2 load
 
@@ -414,7 +411,6 @@ sub load {
 	}
 }
 #}}}
-
 #{{{ save
 =head2 save()
 
@@ -519,7 +515,6 @@ sub save {
 	}
 }
 #}}}
-
 #{{{ settocache
 =head2 settocache()
 
@@ -560,7 +555,6 @@ sub savetocache {
 	}
 }
 #}}}
-
 #{{{ nextval
 #Pro primarni klic vygeneruje hodnotu ze sekvence
 sub nextval {
@@ -590,7 +584,6 @@ sub nextval {
 	}
 }
 #}}}
-
 #{{{ primary_key
 #Vraci primarnich klicu
 sub primary_key {
@@ -604,7 +597,6 @@ sub primary_key {
 	return(undef);
 }
 #}}}
-
 #{{{ primary_keys
 #Vraci primarnich klicu
 sub primary_keys {
@@ -621,7 +613,6 @@ sub primary_keys {
 	return($self->{_primary_keys});
 }
 #}}}
-
 #{{{ primary_defined
 #Vraci zda je definovan jednoduchy klic
 sub primary_defined {
@@ -641,7 +632,6 @@ sub primary_defined {
 	return($retval);
 }
 #}}}
-
 #{{{ primary_where
 #Vraci podminku where
 sub primary_where {
@@ -656,7 +646,6 @@ sub primary_where {
 	return($self->{primary_where});
 }
 #}}}
-
 #{{{ primary_values
 #Vraci hodnoty primarniho klice 
 sub primary_values {
@@ -671,7 +660,6 @@ sub primary_values {
 	return($self->{primary_values});
 }
 #}}}
-
 #{{{ save_type
 #Vrací jakým způsobem se má ukládat na základe primárního klíče, jestli to je update  nebo insert
 sub save_type {
@@ -731,7 +719,6 @@ sub save_type {
 	}
 }
 #}}}
-
 #{{{ rules
 =head2 rules
 
@@ -779,7 +766,6 @@ sub rules {
 	return($self->okay);
 }
 #}}}
-
 #{{{ parseproperty
 =head2 parseproperty
 
@@ -806,7 +792,7 @@ sub parseproperty {
 			$column->{ok} = 0;
 		}
 	} else {
-		if ( $column->{type} == DB_VARCHAR) {
+		if ( $column->{type} == DB_VARCHAR || $column->{type} == DB_FULLTEXT ) {
 			# Now we will get internal server error instead of wrong behavior
 			$self->die("Cafe::Class::parseproperty", "You have to define opts value when using DB_VARCHAR type!", __LINE__) if ( ! defined($column->{opts}) );
 			#Check varchar values. If length of varchar value has zero AF consider value for NULL
@@ -911,7 +897,6 @@ sub parseproperty {
 	return($column->{ok});
 }
 #}}}
-
 #{{{ rulekey
 #V metode GET z prohlizece hleda 
 #primarni klic a v pripade uspechu
@@ -928,7 +913,6 @@ sub rulekey {
 	return(! $self->{msgid});
 }
 #}}}
-
 #{{{ to_time_piece
 =head2 to_time_piece
 
@@ -954,7 +938,6 @@ sub to_time_piece {
 	return($value);
 }
 #}}}
-
 #{{{ dump
 sub dump {
 	my ($self, @params) = @_;
@@ -965,7 +948,6 @@ sub dump {
 	}
 }
 #}}}
-
 #{{{ delete
 #Oznaci zaznam jako smazaný
 sub delete {
@@ -978,7 +960,6 @@ sub delete {
 	}
 }
 #}}}
-
 #{{{ is_deleted
 sub is_deleted {
 	my ($self) = @_;
@@ -990,7 +971,6 @@ sub is_deleted {
 	}
 }
 #}}}
-
 #{{{ gethash
 =head2 gethash
 
@@ -1046,7 +1026,6 @@ sub gethash() {
 	return($data);
 }
 #}}}
-
 #{{{ state_username
 =head2 state_username
 
@@ -1060,7 +1039,6 @@ sub state_username {
 	}
 }
 #}}}
-
 #{{{ state_user
 =head2 state_user
 
@@ -1077,7 +1055,6 @@ sub state_user {
 	return($self->{_state_user});
 }
 #}}}
-
 #{{{session
 =head2  session
 
@@ -1093,7 +1070,6 @@ sub session {
 	return($self->{root}->{session}->{ref($self)});
 }
 #}}}
-
 #{{{AUTOLOAD
 =head2 Method AUTOLOAD
 
@@ -1175,7 +1151,6 @@ sub AUTOLOAD {
 	}
 }
 #}}}
-
 #{{{now
 =head2 Method now
 
@@ -1188,7 +1163,6 @@ sub now {
 	return($now);
 }
 #}}}
-
 #{{{is_primary_values
 =head2 Method is_primary_values
 
@@ -1204,7 +1178,6 @@ sub is_primary_values {
 	return($is_def);
 }
 #}}}
-
 #{{{columns
 =head2 Method columns
 
@@ -1231,7 +1204,6 @@ sub columns {
 	return(\@columns);
 }
 #}}}
-
 #{{{identifier
 =head2 Method identifier
 
@@ -1250,7 +1222,6 @@ sub identifier {
 	return($self->{_identifier});
 }
 #}}}
-
 #{{{get_index
 =head2 get_index
 	return object index in Listing::list array
@@ -1267,7 +1238,6 @@ sub get_index {
 	}
 }
 #}}}
-
 #{{{status_is
 =head2 status_is
 	return status containing value
@@ -1280,7 +1250,6 @@ sub status_is {
 	return ( (($column + 0) & $value) == $value);
 }
 #}}}
-
 #{{{status_add
 =head2 status_add
 	adding selected bit into status
@@ -1293,7 +1262,6 @@ sub status_add {
 	$self->{$column} = $self->{$column} | $value;
 }
 #}}}
-
 #{{{status_remove
 =head2 status_remove
 	removing selected bit from status
@@ -1306,7 +1274,6 @@ sub status_remove {
 	$self->{$column} = $self->{$column} & ~$value;
 }
 #}}}
-
 #{{{loaded
 =head2 loaded
 	return status of load ( if record not loaded from persitent area  return undef else return <> 0)
@@ -1316,7 +1283,6 @@ sub loaded {
 	return($self->{_loaded});
 }
 #}}}
-
 #{{{okay
 =head2 okay
 	return status parameter parsing
@@ -1327,7 +1293,6 @@ sub okay {
 	return($self->{_ok});
 }
 #}}}
-
 #{{{message
 =head2 message
 	get/set global/local message of instance

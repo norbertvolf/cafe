@@ -177,7 +177,6 @@ sub new {
 	return $instance;
 }
 #}}}
-
 #{{{ is_filter
 =head2 is_filter
 
@@ -192,7 +191,6 @@ sub is_filter {
 	return($cnt);
 };
 #}}}
-
 #{{{ is_pager
 =head2 is_pager
 
@@ -207,7 +205,6 @@ sub is_pager {
 	return(0);
 };
 #}}}
-
 #{{{ rules
 #Tahle metoda je schopna pocitat pozici na seznamu
 #stranek. Vola se s potomka, takze potomek nemusi 
@@ -279,7 +276,6 @@ sub rules {
 	return($retval);
 }
 #}}}
-
 #{{{ count
 =item count
 Return count of sql rows (if querycount is defined) or 
@@ -333,7 +329,6 @@ sub count {
 	return($self->{"_count"});
 }
 #}}}
-
 #{{{ prepare_parameters
 sub prepare_parameters {
 	my ($self) = @_;
@@ -346,6 +341,10 @@ sub prepare_parameters {
 			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_INT4 } };
 		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_INT8 ) {
 			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_INT8 } };
+		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_FULLTEXT ) {
+			my $value = $self->{$key};
+			$value =~ s/ /+/g;
+			$self->{params}->{$key} = { "value" => $value, type => { pg_type => PG_VARCHAR } };
 		} else {
 			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_VARCHAR } };
 		}
@@ -356,7 +355,6 @@ sub prepare_parameters {
 	}
 }
 #}}}
-
 #{{{ load
 =head2 load
 
@@ -461,7 +459,6 @@ sub load {
 	return($self->{list});
 }
 #}}}
-
 #{{{ maxpage
 sub maxpage {
 	my ($self) = @_;
@@ -473,7 +470,6 @@ sub maxpage {
 	}
 }
 #}}}
-
 #{{{ more
 sub more {
 	my ($self) = @_;
@@ -484,7 +480,6 @@ sub more {
 	}
 }
 #}}}
-
 #{{{ lastpagevisible
 #Vracti 1 kdyz je v pages videt posledni strankg
 sub lastpagevisible {
@@ -496,7 +491,6 @@ sub lastpagevisible {
 	}
 }
 #}}}
-
 #{{{ firstpagevisible
 #Vracti 0 kdyz je v pages videt posledni strankg
 sub firstpagevisible {
@@ -508,7 +502,6 @@ sub firstpagevisible {
 	}
 }
 #}}}
-
 #{{{ pages
 sub pages {
 	my ($self) = @_;
@@ -537,7 +530,6 @@ sub pages {
 	return($self->{pages});
 }
 #}}}
-
 #{{{ gethash
 =head2 gethash
 
@@ -563,7 +555,6 @@ sub gethash() {
 	return($data);
 }
 #}}}
-
 #{{{ save
 =item Method save
 Save all objects in list
@@ -585,7 +576,6 @@ sub save {
 	}
 }
 #}}}
-
 #{{{ getbyproperty
 =head2 Method getbyproperty
 
@@ -612,7 +602,6 @@ sub getbyproperty {
 	}
 }
 #}}}
-
 #{{{ col
 =head2 Method col
 
@@ -638,7 +627,6 @@ sub col {
 	return($list);
 }
 #}}}
-
 #{{{ key
 =head2 Method key
 
@@ -672,7 +660,6 @@ sub key {
 	return(join("|" , @key));
 }
 #}}}
-
 #{{{ key_count
 =head2 Method key_count
 
@@ -702,7 +689,6 @@ sub key_count {
 	return(join("|" , @key));
 }
 #}}}
-
 #{{{ position
 =head2 Method position
 
@@ -757,7 +743,6 @@ sub position {
 	return($self->{position});
 }
 #}}}
-
 #{{{ clear_cache
 =head2 clear_cache
 
@@ -776,7 +761,6 @@ sub clear_cache {
 	return($self->{list});
 }
 #}}}
-
 #{{{ primary_values
 =head2 primary_values
 
@@ -793,7 +777,6 @@ sub primary_values {
 	return(\@primary_values);
 }
 #}}}
-
 #{{{ summaries
 =head2 summaries
 
@@ -833,7 +816,6 @@ sub summaries {
 	return($self->{_issummaries});
 }
 #}}}
-
 #{{{ url
 =head2 url
 
@@ -859,7 +841,7 @@ sub url {
 		if ( exists( $self->definition()->{columns}->{$column}) ) {
 			$url = $self->definition->{columns}->{$column}->{url}->{prefix};
 			$url .= ( $url =~ /\?/ ? "&" : "?" );
-			$url .= join("&", map { "$_=$row->{$_}"} @{$self->definition->{columns}->{$column}->{url}->{params}});
+			$url .= join("&", map { "$_=" . ($row->{$_} // "")} @{$self->definition->{columns}->{$column}->{url}->{params}});
 		} else {
 			die "Column with url parameters is not defined";
 		}
@@ -867,7 +849,6 @@ sub url {
 	return($url);
 }
 #}}}
-
 #{{{identifier
 =head2 Method identifier
 
@@ -881,7 +862,6 @@ sub identifier {
 	return($self->SUPER::identifier);
 }
 #}}}
-
 #{{{ list
 =head2 list
 
@@ -895,7 +875,6 @@ sub list {
 	return($self->{list});
 }
 #}}}
-
 #{{{ find
 =head2 Method find
 
