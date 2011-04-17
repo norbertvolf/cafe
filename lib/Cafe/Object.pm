@@ -20,8 +20,21 @@ sub new {
 
 #{{{ die
 sub die {
-	my ($self, $sub, $msg, $line) = @_;
+	my $self = shift;
+	my $sub;
+	my $msg;
+	my $line;
+	
 	$self->print_stack;
+	if ( scalar( @_ ) == 3 ) {
+		$sub = $_[0];
+		$msg = $_[1];
+		$line = $_[2];
+	} elsif ( scalar( @_ ) == 2 ) {
+		$sub = ref($self);
+		$msg = $_[0];
+		$line = $_[1];
+	}
 	my $message = "Error $sub : $msg." . ($line ? " (line $line)" : "");
 	die $message;
 }
