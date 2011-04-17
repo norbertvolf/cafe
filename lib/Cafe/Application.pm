@@ -87,7 +87,6 @@ configuration files.
 Cafe::Application - Method for handle client requests bussines logic classes
 
 #}}}
-
 #{{{ handler
 =head2 handler()
 
@@ -108,7 +107,6 @@ sub handler : method {
 	return($app->{status});
 }
 #}}}
-
 #{{{ new
 =head2 new()
 
@@ -180,7 +178,6 @@ sub new {
 	return $instance;
 }
 #}}}
-
 #{{{ controller
 =head2 controller()
 
@@ -262,7 +259,6 @@ sub controller {
 	return( $self->{status} );
 }
 #}}}
-
 #{{{ view
 =head2 view()
 
@@ -328,7 +324,6 @@ sub view {
 	return($self->{status});
 }
 #}}}
-
 #{{{ clean
 =head2 clean()
 
@@ -340,7 +335,6 @@ sub clean {
 	$self->dbh->disconnect();
 }
 #}}}
-
 #{{{rpc_del
 =head2 rpc_del()
 
@@ -379,7 +373,6 @@ sub rpc_del {
     return(undef);
 }
 #}}}
-
 #{{{rpc_set
 =head2 Method rpc_set
 
@@ -411,7 +404,6 @@ sub rpc_set {
 	return(undef);
 }
 #}}}
-
 #{{{rpc_get
 =head2 Method rpc_get
 
@@ -451,7 +443,6 @@ sub rpc_get {
 	return(undef); 
 }
 #}}}
-
 #{{{rpc_class_view
 =head2 Method rpc_class_view
 
@@ -542,7 +533,6 @@ sub rpc_class_view {
 	return($retval); 
 }
 #}}}
-
 #{{{class_null
 =head2 class_null 
 
@@ -565,7 +555,6 @@ sub class_null {
 	return($self->{status});
 }
 #}}}
-
 #{{{listing_view
 =head2 Method listing_view
 
@@ -599,7 +588,6 @@ sub listing_view {
 	return($self->{status});
 }
 #}}}
-
 #{{{class_view
 =head2 Method class_view
 
@@ -635,7 +623,6 @@ sub class_view {
 	return($self->{status});
 }
 #}}}
-
 #{{{ class_print
 =head2 Method class_print
 
@@ -687,7 +674,6 @@ sub class_print {
 	return($self->{status});
 }
 #}}}
-
 #{{{listing_print
 =head2 Method listing_print
 
@@ -738,7 +724,6 @@ sub listing_print {
 	return($self->{status});
 }
 #}}}
-
 #{{{class_save
 =head2 Method class_save
 
@@ -781,7 +766,6 @@ sub class_save {
 	return($self->{status});
 }
 #}}}
-
 #{{{ dir_config
 =head2 
 
@@ -801,7 +785,6 @@ sub dir_config {
 	return($self->{request}->dir_config($varname));
 }
 #}}}
-
 #{{{ manual
 =head2 Method manual
 
@@ -843,7 +826,6 @@ sub manual {
 	return($self->{'status'}); 
 }
 #}}}
-
 #{{{ memd
 =head2 Method memd
 
@@ -865,7 +847,6 @@ sub memd {
 	}
 }
 #}}}
-
 #{{{ rpc_listing_view
 =head2 Method 
 
@@ -954,7 +935,6 @@ sub rpc_listing_view {
 	return($retval); 
 }
 #}}}
-
 #{{{ log
 =head2 log
 
@@ -966,7 +946,6 @@ sub log {
 	say STDERR "$message";
 }
 #}}}
-
 #{{{ clean_struct
 =head2 clean_struct
 
@@ -1001,7 +980,6 @@ sub clean_struct {
 
 }
 #}}}
-
 #{{{ template
 =head2 template
 
@@ -1023,12 +1001,10 @@ sub template {
 				}
 			}
 	}
-	die "Cafe framework: Template not found for " . $self->clean_uri( $self->{request}->uri() ) . "." if ( ! $self->{template} );
-
+	$self->die("Template not found for " . $self->clean_uri( $self->{request}->uri() ) . ".", __LINE__) if ( ! $self->{template} );
 	return($self->{template});
 }
 #}}}
-
 #{{{ method
 =head2 method
 
@@ -1049,4 +1025,5 @@ sub method {
 	return($self->{_method});
 }
 #}}}
+
 1;
