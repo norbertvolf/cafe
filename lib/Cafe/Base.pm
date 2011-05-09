@@ -37,7 +37,6 @@ sub new {
 	$instance->{data}->{app} = $instance; #Copy reference to application to 
 }
 #}}}
-
 #{{{ tmpl
 =head2 tmpl
 
@@ -89,7 +88,6 @@ sub tmpl {
 	return($self->{_tmpl});
 }
 #}}}
-
 #{{{ translations
 =head2 translations
 
@@ -143,7 +141,6 @@ sub translations {
 	return($self->{_translations});
 }
 #}}}
-
 #{{{ getstring
 =head2 getstring 
 
@@ -204,7 +201,6 @@ sub getstring {
 	return($retval);
 }
 #}}}
-
 #{{{ restore_local_locale
 =head2 restore_local_locale
 
@@ -225,7 +221,6 @@ sub restore_local_locale {
 	}   
 }
 #}}}
-
 #{{{set_local_locale
 =head2 set_local_locale
 
@@ -255,7 +250,6 @@ sub set_local_locale {
 	push ( @{$self->{local_locale}}, $locale );
 }
 #}}}
-
 #{{{ post_request
 =item post_request
 #Return post request
@@ -283,7 +277,6 @@ sub post_request {
 	}
 }
 #}}}
-
 #{{{ generate_params
 =item generate_params
 post parameters string generation
@@ -300,7 +293,6 @@ sub generate_params {
 	return $string;
 }
 #}}}
-
 #{{{ parse
 =item parse
 Parsing of http request arguments
@@ -326,7 +318,6 @@ sub parse {
 	}
 }
 #}}}
-
 #{{{ dump
 =head2 Method dump
 
@@ -347,7 +338,6 @@ sub dump {
 	print(STDERR Dumper(@params));	
 }
 #}}}
-
 #{{{ user
 =head2 Method user
 
@@ -360,7 +350,6 @@ sub user {
 	return($self->{user});
 }
 #}}}
-
 #{{{ dir_config
 =head2 Method dir_config
 
@@ -373,7 +362,6 @@ sub dir_config {
 	die "Call virtual method dir_config from Cafe::Base for variable $varname.";
 }
 #}}}
-
 #{{{ dbh
 =head2 Method dbh
 
@@ -407,7 +395,6 @@ sub dbh {
 	return($self->{_dbh});
 }
 #}}}
-
 #{{{ headers
 =head2 Method headers
 
@@ -441,7 +428,6 @@ sub headers {
 	return($self->{_headers});
 }
 #}}}
-
 #{{{ to_time_piece
 =head2 Method to_time_piece
 
@@ -470,7 +456,6 @@ sub to_time_piece {
 	return($value);
 }
 #}}}
-
 #{{{ now
 =head2 Method now
 
@@ -483,7 +468,6 @@ sub now {
 	return($now);
 }
 #}}}
-
 #{{{ template_paths
 =head2 Method template_paths
 
@@ -502,7 +486,6 @@ sub template_paths {
 	return(@paths);
 }
 #}}}
-
 #{{{ clean_uri
 =head2 clean_uri
 
@@ -526,7 +509,6 @@ sub clean_uri {
 	}
 }
 #}}}
-
 #{{{ rich_uri
 =head2 rich_uri
 
@@ -547,7 +529,6 @@ sub rich_uri {
 	}
 }
 #}}}
-
 #{{{message
 =head2 message
 	return global message of instance
@@ -566,4 +547,5 @@ sub message {
 	return($self->{_message});
 }
 #}}}
+
 1;
