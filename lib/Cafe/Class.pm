@@ -532,7 +532,7 @@ sub savetocache {
 		my $values = {};
 		foreach my $key (sort(keys(%{$self->{_definition}->{columns}}))) {
 			my $value;
-			if ( $self->{_definition}->{columns}->{$key}->{type} == DB_DATE && defined($self->{$key})) {
+			if ( $self->{_definition}->{columns}->{$key}->{type} == DB_DATE && defined($self->{$key}) && ref($self->{$key}) eq "Time::Piece" ) {
 				$value = $self->{$key}->datetime;
 			} elsif ( $self->{_definition}->{columns}->{$key}->{type} == DB_DATETIMETZ && defined($self->{$key})) {
 				$value = $self->{$key}->datetime;
@@ -825,7 +825,7 @@ sub parseproperty {
 		} elsif ( $column->{type} == DB_DATE ) {
 			#Check datetime values
 			$self->{root}->set_local_locale() if ( ! $unlocalized);
-			eval { $value = Time::Piece->strptime("$value", "%x"); };
+			$value = Time::Piece->strptime("$value", "%x");
 			$column->{ok} = 0 if ( $@ );
 			$self->{root}->restore_local_locale() if (! $unlocalized);
 			$column->{changed}= 1 if ( 
@@ -986,7 +986,7 @@ sub gethash() {
 			if (! $unlocalized) {
 				$self->{root}->set_local_locale();
 			}
-			$data->{$key} = $self->{$key}->strftime("%x");
+			$data->{$key} = defined($data->{$key}) ? $self->{$key}->strftime("%x") : undef;
 			if (! $unlocalized) {
 				$self->{root}->restore_local_locale();
 			}

@@ -32,9 +32,8 @@ sub new {
 	$instance->{method} = undef; #Initialization of method
 	$instance->{template} = undef; #Initialization of name of template
 	$instance->{filename} = undef; #Initialization of filename for Content-Disposition header
-	$instance->{contenttype} = "text/html;charset=UTF-8"; #Inititalization o contenttype from ContentType header
-	$instance->{data_type} = TEMPLATE; #Initialization of raw data
-	$instance->{data}->{app} = $instance; #Copy reference to application to 
+
+	return($instance);
 }
 #}}}
 #{{{ tmpl
@@ -142,7 +141,7 @@ sub translations {
 }
 #}}}
 #{{{ getstring
-=head2 getstring 
+=head3 C<getstring>
 
 Return locale string from translations.csv
 
@@ -545,6 +544,77 @@ sub message {
 		}
 	}
 	return($self->{_message});
+}
+#}}}
+#{{{ output_type
+=head2 output_type
+
+get/set output_type (TEMPLATE or RAW)
+
+=cut
+sub output_type {
+	my $self = shift;
+	my $output_type = shift;
+
+	$self->{_output_type} = $output_type if ( defined($output_type) ); #Set output_type from parameter
+	$self->{_output_type} = TEMPLATE if ( ! exists($self->{_output_type}) ); #Initialization output_type
+	return( $self->{_output_type} );
+}
+#}}}
+#{{{ content_type
+=head2 content_type
+
+get/set content_type (used for HTTP during serve response)
+
+=cut
+sub content_type {
+	my $self = shift;
+	my $content_type = shift;
+
+	$self->{_content_type} = $content_type if ( $content_type ); #Set content_type from parameter
+	$self->{_content_type} = "text/html;charset=UTF-8" if ( ! $self->{_content_type} ); #Initialization content_type
+	return( $self->{_content_type} );
+}
+#}}}
+#{{{ output
+=head3 C<output>
+	B<Hash context>
+	$self->output( { key => 'value' } ); #Add to output hash 
+	$self->output( { key2 => 'value2' } ); #Add to output hash 
+
+	Output property:
+	{
+		app => ..., #Instance of application
+		key => 'value', 
+		key2 => 'value2', 
+	}
+
+	B<Scalar context>
+	$self->output( "Hello world !!!" );
+
+	Output property:
+	'Hello world !!!"
+
+	Merge hash parameter output hash (in hash context for templating)
+	or overwrite output by input parameter (in scalar context)
+=cut
+sub output {
+	my $self = shift;
+	my $output = shift;
+
+	if ( ! $self->{_output} ) {
+		#Initialization output
+		$self->{_output} = {
+			app => $self, #Copy reference to application
+			getstring => sub { $self->getstring(@_); }, #getstring reference for translations in templates
+		}; 
+	}
+	if ( $output && ref($output) eq "HASH" ) {
+		%{$self->{_output}} = (%{$self->{_output}}, %{$output});
+	} elsif ( $output )  {
+		$self->{_output} = $output;
+	}
+	return($self->{_output});
 }
 #}}}
 

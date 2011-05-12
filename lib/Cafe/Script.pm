@@ -11,7 +11,6 @@ use Sys::Syslog;
 use Apache::ConfigFile;
 use Time::Piece;
 
-
 #{{{ pod
 =head1 NAME
 
@@ -37,7 +36,6 @@ classes from scripts
 
 =cut
 #}}}
-
 #{{{ new
 sub new {
 	my $self = shift;
@@ -97,7 +95,6 @@ sub new {
 	return $instance;
 }
 # }}}
-
 #{{{ log
 =head2 log
 
@@ -109,7 +106,6 @@ sub log {
 	syslog("info", "$message");
 }
 #}}}
-
 #{{{ error 
 =head2 error
 
@@ -121,7 +117,6 @@ sub error {
 	syslog("err", "$message");
 }
 #}}}
-
 #{{{ restore_local_locale
 =head2 restore_local_locale
 
@@ -142,7 +137,6 @@ sub restore_local_locale {
 	}   
 }
 # }}}
-
 #{{{ set_local_locale
 =head2 set_local_locale
 
@@ -158,7 +152,6 @@ sub set_local_locale {
 	push ( @{$self->{local_locale}}, $locale );
 }
 # }}}
-
 #{{{ location
 =head2 location 
 
@@ -215,7 +208,6 @@ sub config_location {
 	return($self->{_config_hash});
 }
 # }}}
-
 #{{{ dir_config
 =head2 dir_config
 
@@ -241,7 +233,6 @@ sub dir_config {
 	return(undef);
 }
 #}}}
-
 #{{{ to_time_piece
 =head2 to_time_piece
 
@@ -269,7 +260,6 @@ sub to_time_piece {
 	return($value);
 }
 # }}}
-
 #{{{ memd
 =head2 memd
 

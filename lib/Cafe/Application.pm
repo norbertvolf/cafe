@@ -212,9 +212,9 @@ sub controller {
 			$retval = &$method({%{$r->param()}});
 		}
 		#Encode hash to json
-		$self->{data} = $json->encode($retval);
-		$self->{contenttype} = "text/plain;charset=UTF-8"; #Inititalization o contenttype from ContentType header
-		$self->{data_type} = RAW; #Initialization of raw data
+		$self->output($json->encode($retval));
+		$self->content_type("text/plain;charset=UTF-8"); #Inititalization o content_type from ContentType header
+		$self->output_type(RAW); #Initialization of raw data
 	} elsif ( $r->param('type') && $r->param('type') eq 'xmlrpc' ) {
 		#Check input data
 		$self->die("Cafe::Application::controller",  "XML-RPC data is not send by POST method", __LINE__) if ( $r->method ne 'POST' );
@@ -239,8 +239,8 @@ sub controller {
 			my $retval = &$method(@params);
 			#$retval = RPC::XML::smart_encode($retval);
 			my $response = RPC::XML::response->new($retval);
-			$self->{data} = $response->as_string();
-			$self->{data_type} = RAW; #Initialization of raw data
+			$self->output($response->as_string());
+			$self->output_type(RAW); #Initialization of raw data
 		}
 	} else {
 		my $method;
@@ -250,7 +250,9 @@ sub controller {
 		if ( $@ ) {
 			$self->{status} = Apache2::Const::NOT_FOUND;
 		} else {
-			&$method($r->param() ? {%{$r->param()}} : undef );
+			my %params = $r->param();
+			%params = (%params, $self->uri_params) if ( $self->is_varmethod );
+			&$method(keys(%params) ? \%params : undef);
 		}
 	}
 	#Save session data
@@ -274,18 +276,14 @@ sub view {
 	if ( $self->{filename} ) { 
 		$r->headers_out->set("Content-Disposition" => "attachment;filename=$self->{filename}"); 
 	}
-	if ( $self->{data_type} eq Cafe::Base::TEMPLATE ) {
-
-		$self->{data}->{getstring} = sub { $self->getstring(@_); };
-		$r->content_type($self->{contenttype});
-
-		if ( $self->{contenttype} eq "application/pdf" || $self->{contenttype} eq "application/postscript") {
-
+	if ( $self->output_type eq Cafe::Base::TEMPLATE ) {
+		$r->content_type($self->content_type);
+		if ( $self->content_type eq "application/pdf" || $self->content_type eq "application/postscript") {
 			$r->no_cache( -1 );
 			#Send document to client
 			$self->set_local_locale();
 			my $output = "";
-			if ( $self->tmpl()->process($self->template(), $self->{data}, \$output) )  {
+			if ( $self->tmpl()->process($self->template(), $self->output, \$output) )  {
 				$r->headers_out->set("Accept-Ranges" => "bytes");
 				$r->headers_out->set("Content-Length" => length($output));
 				$self->set_local_locale("C");
@@ -298,14 +296,14 @@ sub view {
 				$r->log_reason($self->tmpl()->error());
 			}
 			$self->restore_local_locale();
-		} elsif ( $self->{contenttype} eq "application/vnd.oasis.opendocument.text") {
+		} elsif ( $self->content_type eq "application/vnd.oasis.opendocument.text") {
 		} else {
 			$r->no_cache( -1 );
 			$r->rflush();
 			#Send document to client
 			$self->set_local_locale();
 			my $output = "";
-			if ( $self->tmpl()->process($self->template(), $self->{data}, \$output) )  {
+			if ( $self->tmpl()->process($self->template(), $self->output, \$output) )  {
 				$r->print($output);
 			} else {
 				$self->{status} = Apache2::Const::SERVER_ERROR;
@@ -313,12 +311,12 @@ sub view {
 			}
 			$self->restore_local_locale();
 		}
-	} elsif ( $self->{data_type} eq RAW ) {
-		$r->content_type($self->{contenttype});
+	} elsif ( $self->output_type eq RAW ) {
+		$r->content_type($self->content_type);
 		$r->headers_out->set("Expires" => strftime("%a, %e %b %Y %H:%M:%S GMT", gmtime(time - 86400)));
 		$r->no_cache( -1 );
 		$r->rflush();
-		$r->print($self->{data});
+		$r->print($self->output);
 	}
 
 	return($self->{status});
@@ -517,12 +515,10 @@ sub rpc_class_view {
 			$obj->rulekey($content);
 		};
 		$obj->load();
-
-		$self->{data}->{"$instance"} = $obj;
-		$self->{data}->{getstring} = sub { $self->getstring(@_); };
-		$self->{data}->{param} = \@params;
+		$self->output( { "$instance" => $obj } );
+		$self->output( { "param" => \@params } );
 		$self->set_local_locale();
-		if ( $self->tmpl()->process($self->template($template), $self->{data}, \$output) )  {
+		if ( $self->tmpl()->process($self->template($template), $self->output, \$output) )  {
 			$retval = $output;
 		}
 		$self->restore_local_locale(); 
@@ -531,320 +527,6 @@ sub rpc_class_view {
 	}
 
 	return($retval); 
-}
-#}}}
-#{{{class_null
-=head2 class_null 
-
-method check right and set template (if defined)
-Useful for create static pages for info, help or ajax
-applications
-	
-=cut
-sub class_null {
-	my ($self, $template, $right) = @_;
-	my $obj = undef;
-	my $instance = "instance";
-
-
-	if ( ! defined($right) || $self->{user}->isright($right) ) {
-		$self->template($template)
-	} else {
-		$self->{status} = Apache2::Const::FORBIDDEN;
-	}
-	return($self->{status});
-}
-#}}}
-#{{{listing_view
-=head2 Method listing_view
-
-template of print method
-
-=head3 Parameters
-
-$class - class name
-$template - force template name
-$right - idright, if not defined method is allowed for all
-
-=cut
-sub listing_view {
-	my ($self, $class, $template, $right) = @_;
-	if ( ! defined($right) || $self->{user}->isright($right) ) {
-		$self->template($template);
-		my $obj = undef;
-		#Create name of instance variable
-		my $instance = ($class =~ /([0-9A-Za-z]+)$/) ? lc($1) : "instance";
-		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-		eval('$obj = new ' . $class . '($self, $self);') or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-		$obj->rules();
-		$obj->load();
-		$self->{data}->{"$instance"} = $obj;
-		$self->{data}->{listing} = $obj;
-		$self->{data}->{instance} = $obj;
-	} else {
-		$self->{status} = Apache2::Const::FORBIDDEN;
-	}
-
-	return($self->{status});
-}
-#}}}
-#{{{class_view
-=head2 Method class_view
-
-template of view method
-
-=head3 Parameters
-
-$class - class name
-$template - force template name
-$right - idright, if not defined method is allowed for all
-
-=cut
-sub class_view {
-	my ($self, $class, $template, $right) = @_;
-
-	if ( ! defined($right) || $self->{user}->isright($right) ) {
-		$self->template($template);
-		my $instance = "instance";
-		my $obj = undef;
-		if ( $class =~ /([0-9A-Za-z]+)$/) {
-			$instance = lc($1); 
-		}
-		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-		eval('$obj = new ' . $class . '($self, $self);') or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-		$obj->rulekey();
-		$obj->load();
-		$self->{data}->{"$instance"} = $obj;
-		$self->{data}->{record} = $obj;
-		$self->{data}->{instance} = $obj;
-	} else {
-		$self->{status} = Apache2::Const::FORBIDDEN;
-	}
-	return($self->{status});
-}
-#}}}
-#{{{ class_print
-=head2 Method class_print
-
-template of print method for Cafe::Class class
-
-=head3 Parameters
-
-$class - class name
-$template - force template name
-$right - idright, if not defined method is allowed for all
-$contenttype - contenttype of print  
-$format - sprintf format for filename
-@columns - sprintf values for filename
-
-=cut
-sub class_print {
-	my ($self, $class, $template, $right, $contenttype, $format, @columns) = @_;
-
-
-	if ( ! defined($right) || $self->{user}->isright($right) ) {
-		$self->template($template);
-		my $obj = undef;
-		my $instance = "instance";
-
-		if ( $class =~ /([0-9A-Za-z]+)$/) {
-			$instance = lc($1);
-		}
-
-		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-		eval('$obj = new ' . $class . '($self, $self);') or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-		$obj->rulekey();
-		$obj->load();
-		$self->{data}->{"$instance"} = $obj;
-		$self->{data}->{record} = $obj;
-		$self->{data}->{instance} = $obj;
-		$self->{contenttype} = $contenttype;
-
-		if ( $format ) {
-			my @values;
-			foreach my $column (@columns) {
-				eval(qq( push(\@values, \$obj->$column) ));
-			}
-			$self->{filename} = sprintf($format, @values);
-		}
-	} else {
-		$self->{status} = Apache2::Const::FORBIDDEN;
-	}
-
-	return($self->{status});
-}
-#}}}
-#{{{listing_print
-=head2 Method listing_print
-
-template of print method for Cafe::Listing class
-
-=head3 Parameters
-
-$class - class name
-$template - force template name
-$right - idright, if not defined method is allowed for all
-$contenttype - contenttype of print  
-$format - sprintf format for filename
-@columns - sprintf values for filename
-
-=cut
-sub listing_print {
-	my ($self, $class, $template, $right, $contenttype, $format, @columns) = @_;
-
-	if ( ! defined($right) || $self->{user}->isright($right) ) {
-		$self->template($template);
-		my $obj = undef;
-		my $instance = "instance";
-
-		if ( $class =~ /([0-9A-Za-z]+)$/) {
-			$instance = lc($1);
-		}
-
-		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-		eval('$obj = new ' . $class . '($self, $self);') or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-		$obj->rules();
-		$obj->load();
-		$self->{data}->{"$instance"} = $obj;
-		$self->{data}->{listing} = $obj;
-		$self->{data}->{instance} = $obj;
-		$self->{contenttype} = $contenttype;
-
-		if ( $format ) {
-			my @values;
-			foreach my $column (@columns) {
-				push(@values, $obj->{$column});
-			}
-			$self->{filename} = sprintf($format, @values);
-		}
-	} else {
-		$self->{status} = Apache2::Const::FORBIDDEN;
-	}
-
-	return($self->{status});
-}
-#}}}
-#{{{class_save
-=head2 Method class_save
-
-template of saved method
-
-
-=head2 Parameters
-
-=over
-
-=item $class - class name
-
-=item $template_prefix - use template prefix 
-
-=item $right - idright, if not defined method is allowed for all
-
-=back
-
-=cut
-
-sub class_save {
-	my ($self, $class, $template, $right) = @_;
-	my $obj = undef;
-	my $instance = "instance";
-
-	if ( ! defined($right) ||  $self->{user}->isright($right) ) {
-		$self->template($template);
-		if ( $class =~ /([0-9A-Za-z]+)$/) {
-			$instance = lc($1);
-		}
-		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-		eval('$obj = new ' . $class . '($self, $self);') or die "$@";
-		if ( $obj->rules() ) {
-			$obj->save();
-		}
-		$self->{data}->{"$instance"} = $obj;
-	} else {
-		$self->{status} = Apache2::Const::FORBIDDEN;
-	}
-	return($self->{status});
-}
-#}}}
-#{{{ dir_config
-=head2 
-
-Return value of PerlSetVar directive on Apache config file used by AFv2
-
-=head3 Parameters
-
-=over 4
-
-=item * $varname - Hash from Apache::ConfigFile method
-
-=back
-
-=cut 
-sub dir_config {
-	my ($self, $varname) = @_;
-	return($self->{request}->dir_config($varname));
-}
-#}}}
-#{{{ manual
-=head2 Method manual
-
-Returns html manual
-
-=head3 Parameters
-
-=over 
-
-=item $name - input manual file name
-
-=item return html manual
-
-=back 
-
-=cut 
-
-sub manual {
-	my ( $self, $name ) = @_;
-	my $dir = '/var/www/caramel/www/manual/';
-	my $locale = $self->{user}->locale();
-	my $file = $dir.$locale.'/'.$name;
-	if (! -e $file.'.xml') {
-		$locale = 'en_US';
-		$file = $dir.$locale.'/'.$name;
-		if (! -e $file.'.xml') {
-			$self->{status} = 'NOT_FOUND';
-		}
-	}
-	if (! $self->{status}) {
-		my $return = `xmlto html-nochunks $file.xml -o /tmp/`;
-		open(FILE, '/tmp/'.$name.'.html');
-		$self->{data_type} = RAW;
-		$self->{data} = join('', <FILE>);
-		$self->{data} =~ s/img\//\/manual\/$locale\/img\//g; 
-		$self->{contenttype} = "text/html;charset=ISO-8859-1";
-		close(FILE);
-	}
-	return($self->{'status'}); 
-}
-#}}}
-#{{{ memd
-=head2 Method memd
-
-Returns instance of Cache::Memecached class. 
-
-=cut 
-
-sub memd {
-	my ( $self ) = @_;
-	if ( $self->{request}->dir_config('memcached_servers') && ! defined($self->{_memd}) ) {
-		my @servers = split(',', $self->{request}->dir_config('memcached_servers'));
-		$self->{_memd} = new Cache::Memcached {
-			'servers' => \@servers,
-			'debug' => 0,
-			'compress_threshold' => 10_000,
-		} or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
-	} elsif ( defined($self->{_memd}) ) {
-		return($self->{_memd});
-	}
 }
 #}}}
 #{{{ rpc_listing_view
@@ -912,15 +594,12 @@ sub rpc_listing_view {
 		if ( $class =~ /([0-9A-Za-z]+)$/) {
 			$instance = lc($1); 
 		}
-		$self->{data}->{"$instance"} = $obj;
-		$self->{data}->{listing} = $obj;
-
-		#Add getstring function
-		$self->{data}->{getstring} = sub { $self->getstring(@_); };
+		$self->output( { "$instance" => $obj } );
+		$self->output( { "listing" => $obj } );
 
 		#Generate output by template and data
 		$self->set_local_locale();
-		if ( $self->tmpl()->process($self->template($template), $self->{data}, \$output) )  {
+		if ( $self->tmpl()->process($self->template($template), $self->output, \$output) )  {
 			$retval = $output;
 		} else {
 			$self->{status} = Apache2::Const::SERVER_ERROR;
@@ -933,6 +612,278 @@ sub rpc_listing_view {
 	}
 
 	return($retval); 
+}
+#}}}
+#{{{class_null
+=head2 class_null 
+
+method check right and set template (if defined)
+Useful for create static pages for info, help or ajax
+applications
+	
+=cut
+sub class_null {
+	my ($self, $template, $right) = @_;
+	my $obj = undef;
+	my $instance = "instance";
+
+
+	if ( ! defined($right) || $self->{user}->isright($right) ) {
+		$self->template($template)
+	} else {
+		$self->{status} = Apache2::Const::FORBIDDEN;
+	}
+	return($self->{status});
+}
+#}}}
+#{{{class_view
+=head2 Method class_view
+
+template of view method
+
+=head3 Parameters
+
+$class - class name
+$template - force template name
+$right - idright, if not defined method is allowed for all
+
+=cut
+sub class_view {
+	my ($self, $class, $template, $right) = @_;
+
+	if ( ! defined($right) || $self->{user}->isright($right) ) {
+		$self->template($template);
+		my $instance = "instance";
+		my $obj = undef;
+		if ( $class =~ /([0-9A-Za-z]+)$/) {
+			$instance = lc($1); 
+		}
+		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
+		eval('$obj = new ' . $class . '($self, $self);') or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
+		$obj->rulekey();
+		$obj->load();
+		$self->output( { "$instance" => $obj } );
+		$self->output( { "record" => $obj } );
+		$self->output( { "instance" => $obj } );
+	} else {
+		$self->{status} = Apache2::Const::FORBIDDEN;
+	}
+	return($self->{status});
+}
+#}}}
+#{{{class_save
+=head2 Method class_save
+
+template of saved method
+
+
+=head2 Parameters
+
+=over
+
+=item $class - class name
+
+=item $template_prefix - use template prefix 
+
+=item $right - idright, if not defined method is allowed for all
+
+=back
+
+=cut
+
+sub class_save {
+	my ($self, $class, $template, $right) = @_;
+	my $obj = undef;
+	my $instance = "instance";
+
+	if ( ! defined($right) ||  $self->{user}->isright($right) ) {
+		$self->template($template);
+		if ( $class =~ /([0-9A-Za-z]+)$/) {
+			$instance = lc($1);
+		}
+		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
+		eval('$obj = new ' . $class . '($self, $self);') or die "$@";
+		if ( $obj->rules() ) {
+			$obj->save();
+		}
+		$self->output( { "$instance" => $obj } );
+	} else {
+		$self->{status} = Apache2::Const::FORBIDDEN;
+	}
+	return($self->{status});
+}
+#}}}
+#{{{ class_print
+=head2 Method class_print
+
+template of print method for Cafe::Class class
+
+=head3 Parameters
+
+$class - class name
+$template - force template name
+$right - idright, if not defined method is allowed for all
+$contenttype - contenttype of print  
+$format - sprintf format for filename
+@columns - sprintf values for filename
+
+=cut
+sub class_print {
+	my ($self, $class, $template, $right, $contenttype, $format, @columns) = @_;
+
+	if ( ! defined($right) || $self->{user}->isright($right) ) {
+		$self->template($template);
+		my $obj = undef;
+		my $instance = "instance";
+
+		if ( $class =~ /([0-9A-Za-z]+)$/) {
+			$instance = lc($1);
+		}
+
+		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
+		eval('$obj = new ' . $class . '($self, $self);') or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
+		$obj->rulekey();
+		$obj->load();
+		$self->output( { "$instance" => $obj } );
+		$self->output( { "record" => $obj } );
+		$self->output( { "instance" => $obj } );
+		$self->content_type($contenttype);
+
+		if ( $format ) {
+			my @values;
+			foreach my $column (@columns) {
+				eval(qq( push(\@values, \$obj->$column) ));
+			}
+			$self->{filename} = sprintf($format, @values);
+		}
+	} else {
+		$self->{status} = Apache2::Const::FORBIDDEN;
+	}
+
+	return($self->{status});
+}
+#}}}
+#{{{listing_view
+=head2 Method listing_view
+
+template of print method
+
+=head3 Parameters
+
+$class - class name
+$template - force template name
+$right - idright, if not defined method is allowed for all
+
+=cut
+sub listing_view {
+	my ($self, $class, $template, $right) = @_;
+	if ( ! defined($right) || $self->{user}->isright($right) ) {
+		$self->template($template);
+		my $obj = undef;
+		#Create name of instance variable
+		my $instance = ($class =~ /([0-9A-Za-z]+)$/) ? lc($1) : "instance";
+		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
+		eval('$obj = new ' . $class . '($self, $self);') or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
+		$obj->rules();
+		$obj->load();
+		$self->output( { "$instance" => $obj } );
+		$self->output( { "listing" => $obj } );
+		$self->output( { "instance" => $obj } );
+	} else {
+		$self->{status} = Apache2::Const::FORBIDDEN;
+	}
+
+	return($self->{status});
+}
+#}}}
+#{{{listing_print
+=head2 Method listing_print
+
+template of print method for Cafe::Listing class
+
+=head3 Parameters
+
+$class - class name
+$template - force template name
+$right - idright, if not defined method is allowed for all
+$contenttype - contenttype of print  
+$format - sprintf format for filename
+@columns - sprintf values for filename
+
+=cut
+sub listing_print {
+	my ($self, $class, $template, $right, $contenttype, $format, @columns) = @_;
+
+	if ( ! defined($right) || $self->{user}->isright($right) ) {
+		$self->template($template);
+		my $obj = undef;
+		my $instance = "instance";
+
+		if ( $class =~ /([0-9A-Za-z]+)$/) {
+			$instance = lc($1);
+		}
+
+		eval("require $class") or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
+		eval('$obj = new ' . $class . '($self, $self);') or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
+		$obj->rules();
+		$obj->load();
+		$self->output( { "$instance" => $obj } );
+		$self->output( { "listing" => $obj } );
+		$self->output( { "instance" => $obj } );
+		$self->content_type($contenttype);
+
+		if ( $format ) {
+			my @values;
+			foreach my $column (@columns) {
+				push(@values, $obj->{$column});
+			}
+			$self->{filename} = sprintf($format, @values);
+		}
+	} else {
+		$self->{status} = Apache2::Const::FORBIDDEN;
+	}
+
+	return($self->{status});
+}
+#}}}
+#{{{ dir_config
+=head2 
+
+Return value of PerlSetVar directive on Apache config file used by AFv2
+
+=head3 Parameters
+
+=over 4
+
+=item * $varname - Hash from Apache::ConfigFile method
+
+=back
+
+=cut 
+sub dir_config {
+	my ($self, $varname) = @_;
+	return($self->{request}->dir_config($varname));
+}
+#}}}
+#{{{ memd
+=head2 Method memd
+
+Returns instance of Cache::Memecached class. 
+
+=cut 
+
+sub memd {
+	my ( $self ) = @_;
+	if ( $self->{request}->dir_config('memcached_servers') && ! defined($self->{_memd}) ) {
+		my @servers = split(',', $self->{request}->dir_config('memcached_servers'));
+		$self->{_memd} = new Cache::Memcached {
+			'servers' => \@servers,
+			'debug' => 0,
+			'compress_threshold' => 10_000,
+		} or die "AF error " . __FILE__ . " line " . __LINE__ . ": $@";
+	} elsif ( defined($self->{_memd}) ) {
+		return($self->{_memd});
+	}
 }
 #}}}
 #{{{ log
@@ -1017,12 +968,56 @@ sub method {
 	if ( $method ) {
 		if ( $method =~ /\// ) {
 			my $uri = "/" . $self->clean_uri( $method );
-			$self->{_method} = $uri if ( exists( $self->{methods}->{"$uri"} ) );
+			if ( exists( $self->{methods}->{"$uri"} ) ) {
+				#Call method without parameters in uri
+				$self->{_method} = $uri; 
+			} else {
+				#Try find method in parametrized methods
+				#Grep parametrized methods and compare non-variable parts
+				foreach my $key  ( grep { $_ =~ /\/:[A-Za-z][A-Za-z0-9_]+/ } keys(%{$self->{methods}}) ) {
+					#Compare parts of uri and method key
+					my %hash;
+					#Convert method key tokend (from route tables) and uri tokens to array by split and then to hash
+					@hash{split(/\//, $key)} = split(/\//, $uri);
+					#Compare non-variable tokens and ignore variable tokens
+					my @retarr = grep { $hash{$_} eq $_ || $_ =~ /^:/ } keys(%hash);
+					#Compare number or compared tokens vs. number of all tokens 
+					if ( scalar( @retarr ) == scalar( keys(%hash) ) ) {
+						$self->{_method} = $key; 
+						last;
+					}
+				}
+			}
 		}
 		$self->{_method} = $method if ( ! $self->{_method} && exists( $self->{methods}->{$method} ) );
 		$self->die("Cafe::Application::method",  "Method '$method' not found", __LINE__) if ( ! $self->{_method} );
 	}
 	return($self->{_method});
+}
+#}}}
+#{{{ is_varmethod
+=head2 is_varmethod
+
+get/set method to define callback function from methods routing hash
+
+=cut
+sub is_varmethod {
+	my ($self, $method) = @_;
+	return($self->{_method} =~ /\/:[A-Za-z][A-Za-z0-9_]+/);
+}
+#}}}
+#{{{ uri_params
+=head2 uri_params
+
+Return hash with uri params 
+
+=cut
+sub uri_params {
+	my $self = shift;
+	my %hash;
+
+	@hash{split(/\//, $self->method)} = split(/\//, "/" . $self->clean_uri( $self->{request}->uri) );
+	return( map { $_ =~ /^:([A-Za-z][A-Za-z0-9_]+)/; $1 => $hash{$_}; } grep { /^:/ } keys(%hash) );
 }
 #}}}
 
