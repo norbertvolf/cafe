@@ -336,7 +336,7 @@ sub prepare_parameters {
 	foreach my $key ( keys(%{$self->{_definition}->{columns}}) ) {
 		my $column = $self->{_definition}->{columns}->{$key};
 		if ( $column->{type} && $column->{type} == Cafe::Class::DB_DATE ) {
-			$self->{params}->{$key} = { "value" => $self->{$key} ? $self->{$key}->datetime() : undef , type => { pg_type => PG_VARCHAR } };
+			$self->{params}->{$key} = { "value" => ref($self->{$key}) eq "Time::Piece" ? $self->{$key}->datetime() : undef , type => { pg_type => PG_VARCHAR } };
 		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_INT ) {
 			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_INT4 } };
 		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_INT8 ) {
@@ -680,7 +680,7 @@ sub key_count {
 		) {
 			push(@key, $key);
 			if ( $self->definition->{columns}->{$key}->{type} && $self->definition->{columns}->{$key}->{type} == Cafe::Class::DB_DATE ) {
-				push(@key, defined($self->{$key}) ? $self->{$key}->datetime() : "undef");
+				push(@key, defined($self->{$key}) && ref($self->{$key}) eq "Time::Piece"  ? $self->{$key}->datetime() : "undef");
 			} else {
 				push(@key, defined($self->{$key}) ? $self->{$key} : "undef");
 			}

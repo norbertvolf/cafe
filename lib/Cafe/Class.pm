@@ -825,7 +825,7 @@ sub parseproperty {
 		} elsif ( $column->{type} == DB_DATE ) {
 			#Check datetime values
 			$self->{root}->set_local_locale() if ( ! $unlocalized);
-			$value = Time::Piece->strptime("$value", "%x");
+			eval { $value = Time::Piece->strptime("$value", "%x"); };
 			$column->{ok} = 0 if ( $@ );
 			$self->{root}->restore_local_locale() if (! $unlocalized);
 			$column->{changed}= 1 if ( 
