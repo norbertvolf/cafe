@@ -5,7 +5,7 @@ use base qw(Cafe::Base);
 
 use constant MAX_CONTENT_LENGTH => 1024 * 1024 * 5; # 5M
 use constant RAW => 0;
-our $VERSION = '0.8.9';
+our $VERSION = '0.8.11';
 
 use Carp;
 use Apache2::Const -compile => qw(OK FORBIDDEN NOT_FOUND SERVER_ERROR REDIRECT);

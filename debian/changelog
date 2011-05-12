@@ -1,3 +1,19 @@
+libcafe-application-perl (0.8.11-1) stable; urgency=low
+
+  * add content_type, output_type and output methods (properties)
+  * Remove blank rows
+
+ -- Norbert Volf <norbert@volf.eu>  Tue, 17 Apr 2011 23:08:00 +0200
+
+libcafe-application-perl (0.8.10-1) stable; urgency=low
+
+  * add a2ps filter
+  * use die from Object.pm
+  * add parameter polymorphysm to die method
+  * add FULLTEXT column type for PgSQL fulltext
+
+ -- Norbert Volf <norbert@volf.eu>  Tue, 17 Apr 2011 23:08:00 +0200
+
 libcafe-application-perl (0.8.9-1) stable; urgency=low
 
   * add global message capability
