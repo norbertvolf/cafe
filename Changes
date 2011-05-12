@@ -1,9 +1,15 @@
+libcafe-application-perl (0.8.12-1) stable; urgency=low
+
+  * fix die during date parsing
+
+ -- Norbert Volf <norbert@volf.eu>  Wed, 12 May 2011 15:58:00 +0200
+
 libcafe-application-perl (0.8.11-1) stable; urgency=low
 
   * add content_type, output_type and output methods (properties)
-  * Remove blank rows
+  * remove blank rows
 
- -- Norbert Volf <norbert@volf.eu>  Tue, 17 Apr 2011 23:08:00 +0200
+ -- Norbert Volf <norbert@volf.eu>  Wed, 12 May 2011 13:28:00 +0200
 
 libcafe-application-perl (0.8.10-1) stable; urgency=low
 
