@@ -5,7 +5,7 @@ use Text::Iconv;
 use File::Path;
 use File::Spec;
 use File::Temp qw/tempdir/;
-use Cwd;
+use Cwd qw(cwd);
 use MIME::Base64 qw(encode_base64);
 use Encode;
 use POSIX;
