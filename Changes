@@ -1,3 +1,10 @@
+libcafe-application-perl (0.8.13-1) stable; urgency=low
+
+  * use methods instead of instance hash to prepare query parameters
+  * remove getpwd function redefinition
+
+ -- Norbert Volf <norbert@volf.eu>  Tue, Jun 7 09:15:37 2011 +0200
+
 libcafe-application-perl (0.8.12-1) stable; urgency=low
 
   * fix die during date parsing
