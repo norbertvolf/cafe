@@ -21,7 +21,7 @@ use Carp;
 
 Cafe::Listing - Method for implementation listing pages
 
-=head2 DEFINITIONS
+=head1 LISTING DEFINITIONS
 
 You can pass definition as hash as parameter to constructor.
 
@@ -85,7 +85,7 @@ my $definition = {
 
 
 
-=head3 DEFINITION STRUCTURE
+=head3 Structure
 
 =over
 
@@ -118,7 +118,7 @@ my $definition = {
 
 =cut
 
-=head2 new()
+=head3 C<new>
 
 Create instance of Cafe::Listing. Parameter $root is 
 root instance of Cafe::Application. Parameter $parent
@@ -336,17 +336,23 @@ sub prepare_parameters {
 	foreach my $key ( keys(%{$self->{_definition}->{columns}}) ) {
 		my $column = $self->{_definition}->{columns}->{$key};
 		if ( $column->{type} && $column->{type} == Cafe::Class::DB_DATE ) {
-			$self->{params}->{$key} = { "value" => ref($self->{$key}) eq "Time::Piece" ? $self->{$key}->datetime() : undef , type => { pg_type => PG_VARCHAR } };
+			my $value;
+			eval("\$value = \$self->$key()");
+			$self->{params}->{$key} = { "value" => ref($value) eq "Time::Piece" ? $value->datetime() : undef , type => { pg_type => PG_VARCHAR } };
 		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_INT ) {
-			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_INT4 } };
+			$self->{params}->{$key} = { type => { pg_type => PG_INT4 } };
+			eval("\$self->{params}->{$key}->{value} = \$self->$key()");
 		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_INT8 ) {
-			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_INT8 } };
+			$self->{params}->{$key} = { type => { pg_type => PG_INT8 } };
+			eval("\$self->{params}->{$key}->{value} = \$self->$key()");
 		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_FULLTEXT ) {
-			my $value = $self->{$key};
+			my $value;
+			eval("\$value = \$self->$key()");
 			$value =~ s/ /+/g if ($value);
 			$self->{params}->{$key} = { "value" => $value, type => { pg_type => PG_VARCHAR } };
 		} else {
 			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_VARCHAR } };
+			eval("\$self->{params}->{$key}->{value} = \$self->$key()");
 		}
 
 		if ( $column->{paramcbk} && ref($column->{paramcbk}) eq "CODE" ) {
@@ -603,28 +609,19 @@ sub getbyproperty {
 }
 #}}}
 #{{{ col
-=head2 Method col
+=head3 C<col>
 
-Return array based on one column from $self->{list}
-
-=head3 Parameters
-
-=over 
-
-=item $col - name of column from $self->{list}
-
-=item return array created from $self->{list} (array of hashes)
-
-=back 
+  Return reference to array based on one column 
+  from $self->list $obj->col('idarticle');
 
 =cut 
 sub col {
-    my ($self, $col) = @_;
-	my $list = [];
-	foreach my $row (@{$self->{list}}) {
-		push(@{$list}, $row->{$col});
-	}
-	return($list);
+	my $self = shift;
+	my $col = shift;
+
+	my @list = map { $_->{$col} } @{$self->list};
+
+	return wantarray ? @list : \@list;
 }
 #}}}
 #{{{ key
@@ -821,7 +818,7 @@ sub summaries {
 
 Return url based on definition.
 
-=over Parameters
+=over
 
 =item $row - reference to row with url parameter values
 
@@ -850,9 +847,9 @@ sub url {
 }
 #}}}
 #{{{identifier
-=head2 Method identifier
+=head3 C<identifier>
 
-Return string identify class
+Method returning string which identify class
 
 =cut 
 sub identifier {
@@ -863,9 +860,9 @@ sub identifier {
 }
 #}}}
 #{{{ list
-=head2 list
+=head3 C<list>
 
-	Get/Set list of values
+Getter/setter for list of records
 
 =cut
 sub list {
@@ -876,17 +873,17 @@ sub list {
 }
 #}}}
 #{{{ find
-=head2 Method find
+=head3 C<find>
 
 Return element where property value is same as parameter
 
-=head3 Parameters
+$obj->find("idarticle", 12345);
 
 =over 
 
-=item $property - name of column from $self->lis}
+=item First parameter means property - name of column from $self->lis}
 
-=item value - value for condition
+=item Second parameter means value - value for condition
 
 =back 
 
