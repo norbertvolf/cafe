@@ -158,29 +158,37 @@ Cafe::Class - Method for implementation bussines logic
 		);
 	}
 
-=head1 PROPERTIES
-
-=head2 definition
+=head1 DEFINITION
 
 Definition hash describe persistence data of used by descendant of Cafe::Class.
 
-=head3 autoloaders
+=head3 Autoloaders
 
 Array of hash which contains definitions for create instance of other class connected thru some keys to class. 
 
 =over
 
-=item class - name of destination class (Example: class => 'Complaints::Complaint::Sales')
+=item class
 
-=item ref - properties from source class, comma separated string with name of columns in source class, you can 
-also use any method from base class by starting $self-> ().(Example: ref => '$self->articlenumber(),fromdate')
+name of destination class (Example: class => 'Complaints::Complaint::Sales')
 
-=item id - properties from destination class, comma separated string with name of columns in destination class
-(Example: id => 'article,fromdate').
+=item ref (source class) 
 
-=item shadow - autoloader automatically create hidden property in source class which contains
-instance of destination class with name created from last word in name of destination class (for exemaple _sales), 
-you can change this name by this property. (Example: shadow => '_my_sales')
+properties from source class, comma separated string with name of columns in 
+source class, you can also use any method from base class by starting $self-> 
+().(Example: ref => '$self->articlenumber(),fromdate')
+
+=item id (destination class)
+
+properties from destination class, comma separated string with name of columns
+in destination class (Example: id => 'article,fromdate').
+
+=item shadow 
+
+autoloader automatically create hidden property in source class which contains
+instance of destination class with name created from last word in name of 
+destination class (for exemaple _sales), you can change this name by this 
+property. (Example: shadow => '_my_sales')
 
 =back 
 
@@ -192,9 +200,9 @@ option in apache configureation to enable memcaching:
 
 	PerlSetVar memcached_servers "127.0.0.1:11211"
 
-=cut
-
 =head1 METHODS
+
+=cut
 #}}}
 #{{{ new
 #{{{
@@ -202,6 +210,7 @@ option in apache configureation to enable memcaching:
 
 Constructor of Cafe::Class. You can send parameters
 as one HASH or as four unnamed parameters. Return instance Cafe::Class
+
 
 =head4 Parameters
 
@@ -1078,24 +1087,24 @@ from _definition
 
 =cut 
 sub AUTOLOAD {
+	#Save parameters to variables
 	my $self = shift;
+	#Dig number or parameters
+	my $numofprm = scalar(@_);
 	my $param = shift;
 	my $name = our $AUTOLOAD;
 
-	if ( ! ref( $self ) ) {
-		$self->die("Cafe::Class::AUTLOADER", " $self is not object.", __LINE__);
-	}
+	$self->die("Cafe::Class::AUTLOADER", " $self is not object.", __LINE__) if ( ! ref( $self ) );
 	
 	#If not defined DESTROY method and this method is invocated finish method
-	if ( $name =~ /::DESTROY$/ ) {
-		return();
-	}
+	return if ( $name =~ /::DESTROY$/ );
+
 	#Check and get method name
 	if ( $name =~ /::([^:]+)$/ ) {
 		my $method = $1;
 		if ( exists($self->{_definition}->{columns}->{$method}) ) {
 			#Set property if param is defined
-			$self->{$method} = $param if ( defined($param) );
+			$self->{$method} = $param if ( $numofprm );
 			#If is invocated method with name defined as column return value of this column
 			return($self->{$method});
 		} elsif ( exists($self->{_definition}->{autoloaders}->{$method} ) ) {

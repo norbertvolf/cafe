@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.14-1) stable; urgency=low
+
+  * enable set undef values thru setters
+
+ -- Norbert Volf <norbert@volf.eu>  Tue, 7 Jun 2011 10:30:37 +0200
+
 libcafe-application-perl (0.8.13-1) stable; urgency=low
 
   * use methods instead of instance hash to prepare query parameters
