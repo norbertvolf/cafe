@@ -269,7 +269,7 @@ sub new {
 		#Rich url_base
 		foreach my $key (sort(keys(%{$instance->{_definition}->{columns}}))) {
 			my $column = $instance->{_definition}->{columns}->{$key};
-			$column->{url}->{prefix} = $root->rich_uri($column->{url}->{prefix}) if ( exists($column->{url}) );
+			$column->{url}->{prefix} = $root->rich_uri($column->{url}->{prefix}) if ( exists($column->{url}) && ! $column->{url}->{nobaseurl} );
 			$column->{select}->{method} = $root->rich_uri($column->{select}->{method}) if ( exists($column->{select}) && exists($column->{select}->{method}));
 		}
 	}
