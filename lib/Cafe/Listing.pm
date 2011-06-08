@@ -21,102 +21,330 @@ use Carp;
 
 Cafe::Listing - Method for implementation listing pages
 
-=head1 LISTING DEFINITIONS
+=head1 SYNOPSIS
 
-You can pass definition as hash as parameter to constructor.
+ package Schema::Device::Search;
+ use base qw(Cafe::Listing);
 
-Example:
+ sub new {
+	my ($self, $root, $parent) = @_;
+	my ($instance) = $self->SUPER::new(
+		$root,
+		$parent,
+		{
+			title => 'Device Search',
+			query => q(
+				SELECT
+					d.iddevice,
+					d.serialnumber,
+					d.devicename,
+					CASE WHEN p.hostname IS NOT NULL AND p.hostname <> '' THEN p.hostname || '.' || n.domainname ELSE '' END as hostname,
+					p.address,
+					n.public_host,
+					n.netaddress,
+					s.idstore,
+					CASE WHEN s.storename IS NOT NULL THEN s.storename ELSE dp.departmentname END as departmentname,
+					CASE WHEN s.storenumber IS NOT NULL THEN s.storenumber::varchar ELSE dp.departmentnumber END as departmentnumber,
+					dt.description as devicetype,
+					dpv.value as property
+					FROM schema.devices d
+						LEFT JOIN schema.deviceplaces p
+							ON d.iddevice = p.iddevice
+						LEFT JOIN schema.networks n
+							ON p.idnetwork = n.idnetwork
+						LEFT JOIN chain.stores s
+							ON n.idstore = s.idstore
+						LEFT JOIN schema.department dp
+							ON p.iddepartment = dp.iddepartment
+						LEFT JOIN schema.devicetypes dt
+							ON dt.iddevicetype = d.iddevicetype
+						LEFT JOIN schema.device_property_value dpv
+							ON d.iddevice = dpv.iddevice 
+								AND dpv.iddeviceproperty = @iddeviceproperty
+					WHERE d.state & 4 = 0 
+						AND ( d.serialnumber ilike  '%' || @serialnumber || '%'  OR @serialnumber IS NULL ) 
+						AND ( @search IS NULL OR to_tsvector( coalesce(d.devicename , '')
+							|| ' ' || coalesce(s.storename , '')
+							|| ' ' || coalesce(s.storenumber::varchar , '')
+							|| ' ' || coalesce(dp.departmentname , '')
+							|| ' ' || coalesce(dp.departmentnumber::varchar , '')
+							|| ' ' || coalesce(s.city , '')
+							|| ' ' || coalesce(n.domainname, '')
+							|| ' ' || coalesce(dt.description , '')
+						) @@ to_tsquery('cs', @search) )
+					LIMIT @limit OFFSET @offset
 
-my $definition = {
-	{
-		query => q(
-			SELECT DISTINCT
-				cd.iddirective,
-				mu.signature,
-				cd.fromdate,
-				cd.statestamp
-				FROM chain.directives cd
-					LEFT JOIN schema.users mu
-						ON cd.stateuser = mu.iduser
-					LEFT JOIN chain.directivecontents dc
-						ON dc.iddirective = cd.iddirective
-				WHERE 
-					lower(cd.iddirective::varchar || dc.subject || dc.content || coalesce(mu.signature, mu.username, '')) LIKE '%' 
-					AND (cd.state & 4 = 0)
-			LIMIT @limit OFFSET @offset
-		),
-		querycount => q(
-			SELECT 
-				count(*) as count
-				FROM (
-					SELECT DISTINCT
-						cd.iddirective,
-						cd.fromdate,
-						cd.state,
-						cd.stateuser,
-						coalesce(mu.signature, mu.username, '') as stateusername
-						FROM chain.directives cd
-							LEFT JOIN schema.users mu
-								ON cd.stateuser = mu.iduser
-							LEFT JOIN chain.directivecontents dc
-								ON dc.iddirective = cd.iddirective
-						WHERE 
-							lower(cd.iddirective::varchar || dc.subject || dc.content || coalesce(mu.signature, mu.username
-							AND (cd.state & 4 = 0)
-				) x
-		),
-		orderby => [
-			{ 
-				'ascending' => 'DESC',
-				'column' => 'cd.iddirective'
-			}
-		],
-		columns => {
-			fulltext => {
-				type => Cafe::Class::DB_VARCHAR,
-				null => Cafe::Class::DB_NOTNULL,
-				rule => 1,
-				opts => 60,
-				default_session => 1,
+			),
+			querycount => q(
+				SELECT
+					count(*)
+					FROM schema.devices d
+						LEFT JOIN schema.deviceplaces p
+							ON d.iddevice = p.iddevice
+						LEFT JOIN schema.networks n
+							ON p.idnetwork = n.idnetwork
+						LEFT JOIN chain.stores s
+							ON n.idstore = s.idstore
+						LEFT JOIN schema.department dp
+							ON p.iddepartment = dp.iddepartment
+						LEFT JOIN schema.devicetypes dt
+							ON dt.iddevicetype = d.iddevicetype
+						LEFT JOIN schema.device_property_value dpv
+							ON d.iddevice = dpv.iddevice 
+								AND dpv.iddeviceproperty = @iddeviceproperty
+					WHERE d.state & 4 = 0 
+						AND ( d.serialnumber ilike  '%' || @serialnumber || '%'  OR @serialnumber IS NULL ) 
+						AND ( @search IS NULL OR to_tsvector( coalesce(d.devicename , '')
+							|| ' ' || coalesce(s.storename , '')
+							|| ' ' || coalesce(s.storenumber::varchar , '')
+							|| ' ' || coalesce(dp.departmentname , '')
+							|| ' ' || coalesce(dp.departmentnumber::varchar , '')
+							|| ' ' || coalesce(s.city , '')
+							|| ' ' || coalesce(n.domainname, '')
+							|| ' ' || coalesce(dt.description , '')
+						) @@ to_tsquery('cs', @search) )
+			),
+			columns => {
+				search => {
+					type => Cafe::Class::DB_VARCHAR,
+					null => Cafe::Class::DB_NULL,
+					opts => 255,
+
+					msgid => 1,
+					default_session => 1,
+					rule => 1,
+					onlyfilter => 1,
+
+					position => 1,
+					label => 'Search',
+					style => {
+						input => '20em',
+					}
+				},
+				serialnumber => {
+					type => Cafe::Class::DB_VARCHAR,
+					null => Cafe::Class::DB_NULL,
+					opts => 255,
+
+					msgid => 1,
+					rule => 1,
+					default_session => 1,
+
+					position => 2,
+					label => 'Serial Number',
+					orderby => 'd.serialnumber',
+					url => {
+						prefix => '/schema2.html?method=device_view',
+						params => [
+							'iddevice',
+						]
+					},
+					style => {
+						input => '20em',
+						table => 'text-align:left;',
+					}
+				},
+				iddeviceproperty => {
+					type => Cafe::Class::DB_INT,
+					null => Cafe::Class::DB_NULL,
+
+					msgid => 3,
+					default_session => 1,
+					rule => 1,
+					onlyfilter => 1,
+
+					position => 3,
+					label => 'Property',
+					input => 'select',
+                                        select => {
+                                                autoloader => 'properties',
+                                                description => 'fullname',
+                                                identifier => 'iddeviceproperty',
+                                        },
+					style => {
+						input => '20em',
+					}
+				},
+				devicename => {
+					type => Cafe::Class::DB_VARCHAR,
+					position => 4,
+					label => 'Device Name',
+					orderby => 'd.devicename',
+					style => {
+						table => 'text-align:left;',
+					}
+				},
+				devicetype => {
+					type => Cafe::Class::DB_VARCHAR,
+					position => 5,
+					label => 'Device Type',
+					orderby => 'dt.description',
+					style => {
+						table => 'text-align:left;',
+					}
+				},
+				departmentnumber => {
+					type => Cafe::Class::DB_VARCHAR,
+					position => 6,
+					label => 'Department Number',
+					orderby => 'dp.departmentnumber',
+					url => {
+						prefix => '?method=store_view',
+						params => [
+							'idstore',
+						]
+					},
+				},
+				departmentname => {
+					type => Cafe::Class::DB_VARCHAR,
+					position => 7,
+					label => 'Department Name',
+					orderby => 'dp.departmentname',
+					url => {
+						prefix => '?method=store_view',
+						params => [
+							'idstore',
+						]
+					},
+					style => {
+						table => 'text-align:left;',
+					}
+				},
+				hostname => {
+					type => Cafe::Class::DB_VARCHAR,
+					position => 8,
+					label => 'Hostname',
+					orderby => 'p.hostname',
+					style => {
+						table => 'text-align:left;',
+					}
+				},
+				address => {
+					type => Cafe::Class::DB_VARCHAR,
+					position => 9,
+					label => 'IP Address',
+					orderby => 'p.address',
+				},
+				property => {
+					type => Cafe::Class::DB_VARCHAR,
+					position => 10,
+					label => 'Property',
+					orderby => 'dpv.value',
+					style => {
+						table => 'text-align:left;',
+					}
+				},
+			},
+			autoloaders => {
+				properties => {
+					class => 'Schema::Device::Properties',
+				},
 			},
 		}
-	}
-};
+	);
 
+	bless($instance);
 
+	return $instance;
+ }
 
-=head3 Structure
+=over 
+
+=item C<query>
+
+contanins query used by Cafe::Listing to 
+fetch data from database. This string is 
+converted to Cafe::NamedQuery during 
+inicialization of Cafe::Listing. This
+parameter is mandatory.
+
+=item C<querycount>
+
+contanins query used by Cafe::Listing 
+to fetch information about number of rows, 
+which will be fetched by query. This string is 
+converted to Cafe::NamedQuery during 
+inicialization of Cafe::Listing. This
+parameter is not mandatory. It this parameter
+not defined or parameter query don't use
+LIMIT clause than Cafe::Listing cannot
+use perpage feature.
+
+=item C<columns>
+
+This parameter contains definition of columns
+used for filtering. It will be used also for
+definition of auto-template listing in the 
+future. 
+
+B<Definition>
 
 =over
 
-=item query - contanins query used by Cafe::Listing to 
-		fetch data from database. This string is 
-		converted to Cafe::NamedQuery during 
-		inicialization of Cafe::Listing. This
-		parameter is mandatory.
+=item column key 
 
-=item querycount - contanins query used by Cafe::Listing 
-		to fetch information about number of rows, 
-		which will be fetched by query. This string is 
-		converted to Cafe::NamedQuery during 
-		inicialization of Cafe::Listing. This
-		parameter is not mandatory. It this parameter
-		not defined or parameter query don't use
-		LIMIT clause than Cafe::Listing cannot
-		use perpage feature.
+Name of column normally attribute name from database or filter field used in query/querycount.
 
-=item columns - This parameter contains definition of columns
-		used for filtering. It will be used also for
-		definition of auto-template listing in the 
-		future. Definition is in Cafe::Class man
-		page or in example or source in code now().
+=over
 
-=item orderby - This parameter contains default order by
-		definition.
+=item type
+
+Type of column from Cafe::Class
+
+=item position
+
+Position of column in filter form on header of table 
+
+=item label
+
+Key to translations used as field name in filter form on header of table
+
+=item orderby
+
+Definiton of order by used by click on header of table
+
+=item url
+
+Definiton url used for click from rows
+
+=item style
+
+CSS style of row cell or field
+
+=item formatcbk
+
+Callback function called from template to formate value
 
 =back
 
-=cut
+=back
+
+  departmentname => {
+    type => Cafe::Class::DB_VARCHAR,
+    position => 7,
+    label => 'Department Name',
+    orderby => 'dp.departmentname',
+    url => {
+      prefix => '/schema2.html?method=store_view',
+      nobaseurl => 1,
+      params => [
+        'idstore',
+      ]
+    },
+    style => {
+      table => 'text-align:left;',
+    }
+  },
+
+
+=item orderby 
+
+This parameter contains default order by
+definition.
+
+=back
+
+=head1 METHODS
 
 =head3 C<new>
 
@@ -178,7 +406,7 @@ sub new {
 }
 #}}}
 #{{{ is_filter
-=head2 is_filter
+=head3 C<is_filter>
 
 Return 1 if listing need filter section or 0 if listing doesn't need
 filter section.
@@ -192,7 +420,7 @@ sub is_filter {
 };
 #}}}
 #{{{ is_pager
-=head2 is_pager
+=head3 C<is_pager>
 
 Return 1 if listing need pager or 0 if listing doesn't need
 pager.
@@ -277,9 +505,11 @@ sub rules {
 }
 #}}}
 #{{{ count
-=item count
+=head3 C<count>
+
 Return count of sql rows (if querycount is defined) or 
 count of $self->{list} array
+
 =cut
 sub count {
 	my ($self) = @_;
@@ -341,7 +571,12 @@ sub prepare_parameters {
 			$self->{params}->{$key} = { "value" => ref($value) eq "Time::Piece" ? $value->datetime() : undef , type => { pg_type => PG_VARCHAR } };
 		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_INT ) {
 			$self->{params}->{$key} = { type => { pg_type => PG_INT4 } };
-			eval("\$self->{params}->{$key}->{value} = \$self->$key()");
+			if ( $key eq 'position' ) {
+				#Prevent recursion duting calll position -> maxpage -> count -> prepare_parameters
+				$self->{params}->{$key}->{value} = $self->{position};
+			} else {
+				eval("\$self->{params}->{$key}->{value} = \$self->$key()");
+			}
 		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_INT8 ) {
 			$self->{params}->{$key} = { type => { pg_type => PG_INT8 } };
 			eval("\$self->{params}->{$key}->{value} = \$self->$key()");
@@ -362,7 +597,7 @@ sub prepare_parameters {
 }
 #}}}
 #{{{ load
-=head2 load
+=head3 C<load>
 
 Load persistent data from databases by query defined
 in class.
@@ -537,7 +772,7 @@ sub pages {
 }
 #}}}
 #{{{ gethash
-=head2 gethash
+=head3 C<gethash>
 
 Create hash by definition in definitions hash. 
 List can by converted to arrays, or alsu to hash.
@@ -562,8 +797,10 @@ sub gethash() {
 }
 #}}}
 #{{{ save
-=item Method save
+=head3 C<Method save>
+
 Save all objects in list
+
 =cut
 sub save {
     my ($self) = @_;
@@ -583,7 +820,7 @@ sub save {
 }
 #}}}
 #{{{ getbyproperty
-=head2 Method getbyproperty
+=head3 C<getbyproperty>
 
 Return element defined by id
 
@@ -611,8 +848,8 @@ sub getbyproperty {
 #{{{ col
 =head3 C<col>
 
-  Return reference to array based on one column 
-  from $self->list $obj->col('idarticle');
+Return reference to array based on one column 
+from $self->list $obj->col('idarticle');
 
 =cut 
 sub col {
@@ -625,7 +862,7 @@ sub col {
 }
 #}}}
 #{{{ key
-=head2 Method key
+=head3 C<key>
 
 Return unique key for instance of Cafe::Listing. Key is derived from
 definition column containing parameter rule => 1. This key is used for
@@ -658,7 +895,7 @@ sub key {
 }
 #}}}
 #{{{ key_count
-=head2 Method key_count
+=head3 C<key_count>
 
 Return unique key for instance of Cafe::Listing without order by 
 and position recognition. This key is used for storing and gettign 
@@ -687,7 +924,7 @@ sub key_count {
 }
 #}}}
 #{{{ position
-=head2 Method position
+=head3 C<position>
 
 Return actual position for pager
 
@@ -741,7 +978,7 @@ sub position {
 }
 #}}}
 #{{{ clear_cache
-=head2 clear_cache
+=head3 C<clear_cache>
 
 Clear data saved to cache
 
@@ -759,7 +996,7 @@ sub clear_cache {
 }
 #}}}
 #{{{ primary_values
-=head2 primary_values
+=head3 C<primary_values>
 
 	Return primary values of row (row is passed as first parameter)
 
@@ -775,7 +1012,7 @@ sub primary_values {
 }
 #}}}
 #{{{ summaries
-=head2 summaries
+=head3 C<summaries>
 
 Prepare summeries by definitions and return summReturn array of summaries defined in columns definition
 by key sum (true).
@@ -814,7 +1051,7 @@ sub summaries {
 }
 #}}}
 #{{{ url
-=head2 url
+=head3 C<url>
 
 Return url based on definition.
 
