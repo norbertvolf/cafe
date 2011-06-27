@@ -45,7 +45,41 @@ WriteMakefile(
 	},
 	dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
 	clean               => { FILES => 'Cafe-*' },
+        postamble => { files => [
+                "usr/share/cafe/templates/edit.tt2",
+                "usr/share/cafe/templates/filter.tt2",
+                "usr/share/cafe/templates/footer.tt2",
+                "usr/share/cafe/templates/header.tt2",
+                "usr/share/cafe/templates/list.tt2",
+                "usr/share/cafe/templates/pages.tt2",
+                "usr/share/cafe/templates/title.tt2",
+                "usr/share/cafe/templates/toolbar.tt2",
+        ] },
 );
 
+sub MY::postamble {
+    my ($mm, %args) = @_;
+    my $postamble = "";
 
+    # add testcover target if available
+    $postamble .= eval {
+        require ExtUtils::MakeMaker::Coverage;
+        ExtUtils::MakeMaker::Coverage::testcover();
+    } || "";
+
+    # install data files (in /etc, /usr/share, ...)
+    # first, we must add a target in install::
+    for my $makeline (@{ $mm->{RESULT} }) {
+        $makeline =~ s/(install *::.+)\n/$1 priv_data_files\n/;
+    }
+
+    # then, declare the target with the files
+    $postamble .= "\nINSTALL = install -D -p\n\npriv_data_files:\n";
+
+    for my $file (@{ $args{files} }) {
+        $postamble .= "\t\$(INSTALL) $file /$file\n";
+    }
+
+    return $postamble
+}
 
