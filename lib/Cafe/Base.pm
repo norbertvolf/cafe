@@ -18,6 +18,7 @@ use Template;
 use Carp;
 use Time::Piece;
 use Cafe::Filters;
+use URI;
 
 $Data::Dumper::Maxdepth = 4;
 
@@ -497,7 +498,7 @@ sub clean_uri {
 	return if ( ! $uri );
 	
 	if ( $self->dir_config('uri_base')) {
-		my $uri_base = $self->dir_config('uri_base');
+		my $uri_base =  URI->new($self->dir_config('uri_base'))->path;
 		$uri_base = $uri_base . "/" if ( ! $uri_base =~ /\/$/ );
 		$uri_base = "/" . $uri_base if ( ! $uri_base =~ /^\// );
 		$uri =~ s/^$uri_base//;
@@ -519,7 +520,7 @@ sub rich_uri {
 
 	return if ( ! $uri );
 	if ( $self->dir_config('uri_base')) {
-		my $uri_base = $self->dir_config('uri_base');
+		my $uri_base =  URI->new($self->dir_config('uri_base'))->path;
 		my $uri = $self->clean_uri($uri);
 		$uri =~ s/^\///;
 		return($uri_base . $uri);
@@ -617,5 +618,4 @@ sub output {
 	return($self->{_output});
 }
 #}}}
-
 1;
