@@ -1,3 +1,11 @@
+libcafe-application-perl (0.8.20-1) stable; urgency=low
+
+  * Add default templates to framework
+  * Use URI module to fetch path from uri_base
+  * Prepare normal POST JSON calling method instead of JSONRPC
+
+ -- Norbert Volf <norbert@volf.eu>  Mon, 27 Jun 2011 23:27:00 +0200
+
 libcafe-application-perl (0.8.15-1) stable; urgency=low
 
   * fix deep recursion
