@@ -46,14 +46,14 @@ WriteMakefile(
 	dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
 	clean               => { FILES => 'Cafe-*' },
         postamble => { files => [
-                "usr/share/cafe/templates/edit.tt2",
-                "usr/share/cafe/templates/filter.tt2",
-                "usr/share/cafe/templates/footer.tt2",
-                "usr/share/cafe/templates/header.tt2",
-                "usr/share/cafe/templates/list.tt2",
-                "usr/share/cafe/templates/pages.tt2",
-                "usr/share/cafe/templates/title.tt2",
-                "usr/share/cafe/templates/toolbar.tt2",
+                "share/cafe/templates/edit.tt2",
+                "share/cafe/templates/filter.tt2",
+                "share/cafe/templates/footer.tt2",
+                "share/cafe/templates/header.tt2",
+                "share/cafe/templates/list.tt2",
+                "share/cafe/templates/pages.tt2",
+                "share/cafe/templates/title.tt2",
+                "share/cafe/templates/toolbar.tt2",
         ] },
 );
 
@@ -74,11 +74,12 @@ sub MY::postamble {
     }
 
     # then, declare the target with the files
-    $postamble .= "\nINSTALL = install -D -p\n\npriv_data_files:\n";
+    $postamble .= "\nINSTALL = install -m 644 -D -p\n\npriv_data_files:\n";
 
     for my $file (@{ $args{files} }) {
-        $postamble .= "\t\$(INSTALL) $file /$file\n";
+        $postamble .= "\t\$(INSTALL) $file \$(DESTDIR)/\$(PREFIX)/$file\n";
     }
+
 
     return $postamble
 }
