@@ -215,7 +215,7 @@ sub new {
 	); 
 
 	bless(\$instance);
-	\$instance->{$primarykey} = \$$primarykey if ( \$$primarykey );
+	\$instance->$primarykey(\$$primarykey) if ( \$$primarykey );
 	\$instance->load() if ( \$$primarykey );	
 	return \$instance
 }
