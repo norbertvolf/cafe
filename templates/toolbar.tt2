@@ -1,0 +1,18 @@
+[% FILTER collapse %]
+
+<div id="loading_info">[% getstring('Loading') %]<br/><img src="/images/ajax-loader.gif"></div>
+
+<div id="sitemast">
+	<div class="logo"><a href="/"><img style="float:left" src="/images/logo-brand.gif"></a></div>
+	<div class="topleftinfo"><a href="http://www.bata.cz/">www.bata.cz</a> <a href="http://www.bata.sk/">www.bata.sk</a></div>
+	<div id="intranettitle"><a href="/"><img src="/images/caramel.png"></div>
+</div>
+
+<div id="menuBox">
+	<a name="menuBox"></a>
+	<ul>[% app.user.menu %]</ul>
+</div>
+
+<hr class="clear">
+
+[% END %]

@@ -1,0 +1,132 @@
+[% IF record %]
+<fieldset class="formsection"
+	[% IF record.definition.form %]
+		id="[% record.identifier %]"
+		record_id="[% record.primary_values.join(',') %]"
+		record_key="[% record.primary_keys.join(',') %]"
+		[% IF record.definition.form.url %]record_url = "[% record.definition.form.url %]"[% END %]
+		[% IF record.definition.form.readonly %]record_readonly[% END %]
+		[% IF record.definition.form.method_get %]record_method_get = "[% record.definition.form.method_get %]"[% END %]
+		[% IF record.definition.form.method_set %]record_method_set = "[% record.definition.form.method_set %]"[% END %]
+		[% IF record.definition.form.method_del %]record_method_del = "[% record.definition.form.method_del %]"[% END %]
+		[% IF record.definition.form.method_del_caption %]method_del_caption = "[% getstring(record.definition.form.method_del_caption) %]"[% END %]
+		[% IF record.definition.form.method_del_url %]method_del_url = "[% record.definition.form.method_del_url %]"[% END %]
+		[% IF record.definition.form.caption_edit %]record_caption_edit = "[% getstring(record.definition.form.caption_edit) %]"[% END %]
+		[% IF record.definition.form.caption_save %]record_caption_save = "[% getstring(record.definition.form.caption_save) %]"[% END %]
+		[% IF record.definition.form.caption_cancel %]record_caption_cancel = "[% getstring(record.definition.form.caption_cancel) %]"[% END %]
+		[% IF record.definition.form.caption_delete %]record_caption_delete = "[% getstring(record.definition.form.caption_delete) %]"[% END %]
+		form_layout = "[% IF record.definition.form.layout %][% record.definition.form.layout %][% ELSE %]HBoxLayout[% END %]"
+	[% END %]
+
+>
+	[% IF title %]<legend>[% title %]</legend>
+	[% ELSIF record.definition.title %]<legend>[% getstring(record.definition.title) %]</legend>
+	[% END %]
+
+
+	[% IF buttons %] <div class="buttonsection" style="margin-bottom:.5em;"> [% buttons %] </div> [% END %]
+	[% IF tip %]<div class="tipsection"><div style="float:left;width:20px;height:20px;background:transparent url(/images/sprite.png) repeat-x left -1250px;"></div>[% getstring(tip) %]</div>[%  END %]
+
+	[% FOREACH column = record.columns %]
+		[% IF column.label AND column.position %]
+		<div class="controlsection">
+			<span class="join">
+				<span class="controltitle" >[% IF column.translate %][% getstring(column.label) %][% ELSE %][% column.label %][% END %]:</span>
+				[% 
+				#Prepare default formats for date and numeric 
+				format = column.format
+				%]
+				[% IF column.type == constants.class.DB_DATE && ! format  %]
+					[% format = "%x" %]
+				[% END %]
+
+				[% IF column.type == constants.class.DB_NUMERIC && ! format  %]
+					[% format = "%.2f" %]
+				[% END %]
+
+				[% IF column.input == 'area'%]<br/>[% END %]
+				[% key = column.key %]
+
+
+				<span 
+					class="controlvalue"
+					input_name="[% key %]"
+					[% IF column.rule && column.style.input %]input_style = "[% column.style.input  %]"[% END %]
+					[% IF column.rule && column.readonly %]input_readonly = 1[% END %]
+					[% IF column.rule && column.input %]input_type = "[% column.input  %]"[% END %]
+					[% IF column.rule && column.select.method %]select_method = "[% column.select.method  %]"[% END %]
+					[% IF column.rule && column.select.identifier %]select_identifier = "[% column.select.identifier  %]"[% END %]
+					[% IF column.rule && column.select.description %]select_description = "[% column.select.description  %]"[% END %]
+					[% IF column.rule && column.select.title %]select_title = "[% column.select.title  %]"[% END %]
+					[% IF column.rule && column.select.args %]select_method_args = "[% column.select.args  %]"[% END %]
+					[% IF column.rule && column.autocomplete.method %]autocomplete_method = "[% column.autocomplete.method  %]"[% END %]
+					[% IF column.rule && column.autocomplete.method_get %]autocomplete_method_get = "[% column.autocomplete.method_get  %]"[% END %]
+					[% IF column.rule && column.autocomplete.identifier %]autocomplete_identifier = "[% column.autocomplete.identifier  %]"[% END %]
+					[% IF column.rule && column.autocomplete.description %]autocomplete_description = "[% column.autocomplete.description  %]"[% END %]
+					[% IF column.rule && column.autocomplete.not_found %]autocomplete_not_found = "[% getstring(column.autocomplete.not_found)  %]"[% END %]
+				>
+				[% IF column.input == 'select' %]
+					[% IF column.select.autoloader %]
+						[% autoloader = column.select.autoloader %]
+						[% description = column.select.description %]
+						[% record.$autoloader.$description %]
+					[% ELSE %]
+						[% record.$key %]
+					[% END %]
+				[% ELSIF column.input == 'text' && column.autocomplete %]
+					[% IF column.autocomplete.autoloader %]
+						[% autoloader = column.autocomplete.autoloader %]
+						[% description = column.autocomplete.description %]
+						[% record.$autoloader.$description %]
+					[% ELSE %]
+						[% record.$key %]
+					[% END %]
+				[% ELSE %]
+					[% value = record.$key %]
+					[% IF column.show %]
+						[% show = column.show %]
+						[% value = value.$show %]
+					[% END %]
+
+					[% IF column.exists("formatcbk") %]
+						[% column.formatcbk(record, key) %]
+					[% ELSIF column.type == constants.class.DB_DATE %]
+						[% value.strftime(format) %]
+					[% ELSIF value != "" AND format %]
+						[% value | sprintf(format) %]
+					[% ELSIF value != "" %]
+						[% value %]
+					[% END %]
+				[% END %]
+				[% IF column.suffix %]
+					[% column.suffix %]
+				[% END %]
+				</span>
+			</span>
+		</div>
+		[% END %]
+	[% END %]
+
+
+	[% IF record.definition.columns.stateuser && record.definition.columns.statestamp %]
+	<div class="controlsection">
+		[% getstring('Changed by') %] [% record.state_user.signature %] [% getstring('at') %] [% record.statestamp.strftime('%x %X') %]
+	</div>
+	[% END %]
+	<hr class="clear"/>
+</fieldset>
+[% END %]
+
+[% IF ! noscript %]
+<script type="text/javascript">
+	{
+		var init = function () {
+			document.[% record.identifier %] = new Record ( document.getElementById("[% record.identifier %]") );
+		}
+		if ( window.addEventListener ) {
+			window.addEventListener('load', init, false);
+		}
+	}
+
+</script> 
+[% END %]

@@ -1,0 +1,40 @@
+	[% IF list.is_pager && list.maxpage() %]
+	<div class="formsection">
+		<div class="controlsection">
+			<input type="button" class="controlbutton" title="[% getstring("Begin") %]" value="<<" onclick="window.location.replace('?command=4');"/>
+			<input type="button" class="controlbutton" title="[% getstring("Backward") %]" value="<" onclick="window.location.replace('?command=2');"/>
+			<select class="controltext" style="width:4em" id="perpage"  name="perpage" 
+				title="[% getstring("Rows per page") %]"
+				onchange="
+					var perpage = document.getElementById('perpage');
+					window.location.replace('?command=5&perpage=' + perpage.value);
+				">
+				<option [% IF list.perpage == 10 %] selected [% END %]>10</option>
+				<option [% IF list.perpage == 25 %] selected [% END %]>25</option>
+				<option [% IF list.perpage == 50 %] selected [% END %]>50</option>
+				<option [% IF list.perpage == 100 %] selected [% END %]>100</option>
+			</select>
+			<input type="button" class="controlbutton" title="[% getstring("Forward") %]" value=">" onclick="window.location.replace('?command=1');"/>
+			<input type="button" class="controlbutton" title="[% getstring("End") %]" value=">>" onclick="window.location.replace('?command=3');"/>
+			[% IF list.more() %]		
+					<span class="controlvalue">[% getstring("Page") %] [% list.position + 1 %] z [% list.maxpage() + 1 %]</span>
+			[% END %]		
+		</div>
+
+		<div class="controlsection">
+			[% IF ! list.firstpagevisible() %]		
+					<span class="controlvalue">...</span>
+			[% END %]		
+			[% FOREACH page IN list.pages %]		
+				[% IF page.index == list.position %]
+					<span class="controlvaluehighlited" title="[% getstring("Page contains records from") %] [% page.start %] [% getstring("To") %] [% page.end %]">[% page.index + 1 %]</span>
+				[% ELSE %]
+					<span class="controlvalue"><a href="?command=5&position=[% page.index %]" title="[% getstring("Page contains records from") %] [% page.start %] [% getstring("To") %] [% page.end %]">[% page.index + 1 %]</a></span>
+				[% END %]
+			[% END %]
+			[% IF ! list.lastpagevisible() %]		
+					<span class="controlvalue">...</span>
+			[% END %]		
+		</div>
+	</div>
+	[% END %]

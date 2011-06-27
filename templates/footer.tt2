@@ -1,0 +1,8 @@
+<hr class="clear">
+[% IF WITH_FOOTER  %]
+	<div style="text-align:right;">
+		<a border="0" aling="textmidlle" href="?method=manual#[% method %]" target="_blank" title="Manual"><img src="/images/caramel-help.png"></a>
+	</div>
+[% END  %]
+</body>
+</html>

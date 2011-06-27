@@ -1,0 +1,179 @@
+[% IF list.list %]
+<table 
+	class="formsection"
+	[% IF list.definition.form %]
+		id="[% list.identifier %]"
+		record_key="[% list.primary_keys.join(',') %]"
+		[% IF list.definition.form.url %]record_url = "[% list.definition.form.url %]"[% END %]
+		[% IF list.definition.form.method_get %]record_method_get = "[% list.definition.form.method_get %]"[% END %]
+		[% IF list.definition.form.method_set %]record_method_set = "[% list.definition.form.method_set %]"[% END %]
+		[% IF list.definition.form.method_del %]record_method_del = "[% list.definition.form.method_del %]"[% END %]
+		[% IF list.definition.form.method_del_caption %]method_del_caption = "[% getstring(list.definition.form.method_del_caption) %]"[% END %]
+		[% IF list.definition.form.caption_new %]table_caption_new = "[% getstring(list.definition.form.caption_new) %]"[% END %]
+		[% IF list.definition.form.allow_update %]allow_update = "[% list.definition.form.allow_update %]"[% END %]
+	[%- END %]
+>
+	[% IF list.definition.title && ! no_table_title %]<caption>[% getstring(list.definition.title) %]</caption>[% END %]
+	
+	<thead valign="top">
+		<tr>
+			[% IF row_counter %]<th scope="col">&nbsp;</th>[% END -%]
+			[%- FOREACH column = list.columns %]
+				[% FILTER collapse %]
+				[% IF ! column.onlyfilter %]
+					<th input_name="[% column.key %]"
+						[% IF column.input %]input_type = "[% column.input  %]"[% END %]
+						[% IF column.style.input %]input_style = "[% column.style.input  %]"[% END %]
+						[% IF column.tags.input.style %]input_style = "[% column.tags.input.style %]"[% END %]
+						[% IF column.select.method %]select_method = "[% column.select.method  %]"[% END %]
+						[% IF column.select.identifier %]select_identifier = "[% column.select.identifier  %]"[% END %]
+						[% IF column.select.description %]select_description = "[% column.select.description  %]"[% END %]
+						[% IF column.select.title %]select_title = "[% column.select.title  %]"[% END %]
+						[% IF column.select.args %]select_method_args = "[% column.select.args  %]"[% END %]
+						[% IF column.checkbox.caption_ok %]checkbox_caption_ok = "[% getstring(column.checkbox.caption_ok) %]"[% END %]
+						[% IF column.checkbox.caption_nook %]checkbox_caption_nook = "[% getstring(column.checkbox.caption_nook) %]"[% END %]
+						[% IF column.autocomplete.method %]autocomplete_method = "[% column.autocomplete.method  %]"[% END %]
+						[% IF column.autocomplete.method_get %]autocomplete_method_get = "[% column.autocomplete.method_get  %]"[% END %]
+						[% IF column.autocomplete.identifier %]autocomplete_identifier = "[% column.autocomplete.identifier  %]"[% END %]
+						[% IF column.autocomplete.description %]autocomplete_description = "[% column.autocomplete.description  %]"[% END %]
+						[% IF column.autocomplete.not_found %]autocomplete_not_found = "[% getstring(column.autocomplete.not_found)  %]"[% END %]
+					>
+						[% IF column.label %]
+						[%- IF column.orderby %]
+							<a href="?[% IF app.method %]method=[% app.method %]&[% END %]orderby=[% column.orderby %]">[% getstring(column.label) %]</a>
+						[% ELSE -%]
+							[% IF column.translate %][% getstring(column.label) %][% ELSE %][% column.label %][% END %]
+						[% END %]
+						[% END %]
+					</th>
+				[%- END -%]
+				[%- END -%]
+			[%- END %]
+		</tr>
+		[% IF list.summaries && list.definition.form.summary == 'top' %]<tr> [% INCLUDE summary %] </tr>[% END %]
+	</thead>
+	<tbody>
+	[% FOREACH row IN list.list %]
+		[% FILTER collapse %]
+		<tr 
+			class="[% IF loop.index % 2 == 0 %]tablerow1st[% ELSE %]tablerow2nd[% END %]"
+			record_id="[% list.primary_values(row).join(',') %]"
+		>
+		[% END -%]
+			[% IF row_counter %]<td class="left">[% list.position * list.perpage + loop.index + 1 %].</td>[% END %]
+			[% FOREACH column = list.columns -%]
+				[% IF column.position && ! column.onlyfilter %]
+					[% FILTER collapse %]
+						<td
+							[%# Stara verze tagovni je to obsolete %]
+							[% IF column.style.table %]style="[% column.style.table %]"[% END %]
+							[% IF column.tags.td %]
+								[% FOREACH key IN column.tags.td.keys %][% key %]="[% column.tags.td.$key %]"[% END -%]
+							[% END -%]
+						>
+						[% key = column.key %]
+						[% IF column.url %]
+							<a 
+								[% IF column.url.attributes %][% column.url.attributes %][% END %]
+								href="[% list.url(key, row) %]"
+							>
+						[% END %]
+						[% IF column.exists("formatcbk") %]
+							[% column.formatcbk(row, key, list) %]
+						[% ELSE %]
+							[% format = column.format %]
+							[% use_thousands_sep = 0 %]
+
+							[% IF column.type == constants.class.DB_DATE && ! format  %]
+								[% format = "%x" %]
+							[% END %]
+
+							[% IF column.type == constants.class.DB_NUMERIC && ! format  %]
+								[% format = "%.2f" %]
+							[% END %]
+
+							[% IF column.type == constants.class.DB_NUMERIC %]
+								[% use_thousands_sep = 1 %]
+							[% END %]
+
+							[% IF column.input == 'checkbox' %]
+								[% IF row.$key && column.checkbox.caption_ok %]
+									[% getstring(column.checkbox.caption_ok) %]
+								[% ELSIF ! row.$key && column.checkbox.caption_nook %]
+									[% getstring(column.checkbox.caption_nook) %]
+								[% ELSE %]
+									[% row.$key %]
+								[% END %]
+							[% ELSIF column.input == 'select' %]
+								[% IF column.select.autoloader %]
+									[% autoloader = column.select.autoloader %]
+									[% description = column.select.description %]
+									[% row.$autoloader.$description %]
+								[% ELSE %]
+									[% row.$key %]
+								[% END %]
+							[% ELSIF column.input == 'text' && column.autocomplete %]
+								[% IF column.autocomplete.autoloader %]
+									[% autoloader = column.autocomplete.autoloader %]
+									[% description = column.autocomplete.description %]
+									[% row.$autoloader.$description %]
+								[% ELSE %]
+									[% row.$key %]
+								[% END %]
+							[% ELSE %]
+								[% IF column.type == constants.class.DB_DATE %]
+									[% obj = row.$key %]
+									[% obj.strftime(format) %]
+								[% ELSIF format %]
+									[% row.$key | sprintf(format, use_thousands_sep) IF row.$key.defined %]
+								[% ELSE %]
+									[% row.$key %]
+								[% END %]
+							[% END %]
+						[% END %]
+						[% IF column.exists("url") %]
+							</a>
+						[% END %]
+						</td>
+					[%- END %]
+				[%- END %]
+			[%- END %]
+		</tr>
+	[% END %]
+	</tbody>
+	[% IF list.summaries && ( ! list.definition.form.summary || list.definition.form.summary == 'bottom' ) %]
+	<tfoot>
+		<tr> [% INCLUDE summary %] </tr>
+	</tfoot>
+	[% END %]
+</table>
+[% END %]
+
+
+[% BLOCK summary %]
+	[% FOREACH column = list.columns -%]
+		[% IF column.position && ! column.onlyfilter %]
+			[% IF list.definition.form.summary == 'top' %]<th>[% ELSE %]<td>[% END %]
+			[% format = column.format %]
+			[% use_thousands_sep = 0 %]
+
+			[% IF column.type == constants.class.DB_DATE && ! format  %]
+				[% format = "%x" %]
+			[% END %]
+
+			[% IF column.type == constants.class.DB_NUMERIC && ! format  %]
+				[% format = "%.2f" %]
+			[% END %]
+
+			[% IF column.type == constants.class.DB_NUMERIC %]
+				[% use_thousands_sep = 1 %]
+			[% END %]
+			[% IF format %]
+				[% column.sum | sprintf(format, use_thousands_sep) IF column.sum.defined %]
+			[% ELSE %]
+				[% column.sum %]
+			[% END %]
+			[% IF list.definition.form.summary == 'top' %]</th>[% ELSE %]</td>[% END %]
+		[% END %]
+	[% END %]
+[% END %]

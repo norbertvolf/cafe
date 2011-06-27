@@ -1,0 +1,19 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+[% FILTER collapse %]<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta name="author" content="Norbert Volf, Jan Stavěl, Tomáš Tureček"/>
+	<meta name="copyright" content="(c) BAŤA, akciová společnost"/>
+	<meta name="description" content="Intranet"/>
+	<meta name="keywords" content="intranet application"/>
+	<link rel="shortcut icon" href="/images/icons/bata.ico" type="image/x-icon"/>
+	[% IF title %]
+	<title>[% title %]</title>
+	[% ELSIF instance.definition.title %]
+	<title>[% getstring(instance.definition.title) %]</title>
+	[% END %]
+	[% prerequirities %]
+	<link rel="stylesheet" title="Light" href="/css/Light/bata.css" type="text/css" />
+	<link rel="stylesheet" title="Dark" href="/css/Dark/bata.css" type="text/css" />
+</head>
+<body>
+[% END %]
