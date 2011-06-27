@@ -179,7 +179,7 @@ sub new {
 }
 #}}}
 #{{{ controller
-=head2 controller()
+=head3 C<controller>
 
 Call method specified in query string
 
@@ -188,7 +188,25 @@ sub controller {
 	my ($self) = @_;
 	my $r = $self->{request};
 
-	if ( $r->param('type') && $r->param('type') eq 'json' ) {
+	if ( $r->method eq 'POST' && $r->headers_in->{"Content-Type"} =~ /application\/json/ ) {
+		#Receive request from client sent as POST and request type is json data
+		#Prepare json parser
+		my $json = JSON::XS->new->utf8(0)->pretty->allow_nonref;
+		#Check size of data
+		my $len  = $r->headers_in()->get('Content-length');
+		$self->die("Cafe::Application::controller",  "JSON data is out of limit", __LINE__) if ( MAX_CONTENT_LENGTH < $len );
+		#Call routed method
+		my ($buf, $js);
+		while( $r->read($buf,$len) ) { $js .= $buf; }
+		my $params = $json->decode($js);
+		my $method = $self->{methods}->{$self->method($r->uri())};
+		my $retval = &$method($params);
+		#Encode hash to json
+		$self->output($json->encode($self->clean_struct($retval)));
+		$self->content_type("text/plain;charset=UTF-8"); #Inititalization o content_type from ContentType header
+		$self->output_type(RAW); #Initialization of raw data
+	} elsif ( $r->param('type') && $r->param('type') eq 'json' ) {
+		#OBSOLETE
 		my $retval;
 		my $json = JSON::XS->new->utf8(0)->pretty->allow_nonref;
 		#Check input data
@@ -898,7 +916,7 @@ sub log {
 }
 #}}}
 #{{{ clean_struct
-=head2 clean_struct
+=head3 C<clean_struct>
 
 	Remove class instances from anonymous structure recursively
 
