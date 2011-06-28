@@ -1091,8 +1091,13 @@ Method returning string which identify class
 =cut 
 sub identifier {
 	my ($self, $identifier) = @_;
-	$self->SUPER::identifier($identifier);
-	$self->SUPER::identifier(lc($1)) if ( ! defined($self->{_identifier}) && ref($self) =~ /([a-zA-Z_]+)$/ );
+	if ( $identifier ) {
+		$self->SUPER::identifier($identifier);
+	} else {
+		$identifier = lc(ref($self));
+		$identifier =~ s/:://g;
+		$self->SUPER::identifier($identifier);
+	}
 	return($self->SUPER::identifier);
 }
 #}}}
