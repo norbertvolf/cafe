@@ -1284,12 +1284,11 @@ sub status_remove {
 }
 #}}}
 #{{{loaded
-=head2 loaded
+=head3 C<loaded>
 	return status of load ( if record not loaded from persitent area  return undef else return <> 0)
 =cut
 sub loaded {
-	my ($self) = @_;
-	return($self->{_loaded});
+	return(shift->{_loaded});
 }
 #}}}
 #{{{okay

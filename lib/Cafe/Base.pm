@@ -47,10 +47,8 @@ sub tmpl {
 	my ($self) = @_;
 
 	if ( ! $self->{_tmpl} ) {
-		my @paths = $self->template_paths();
-
 		$self->{_tmpl} = new Template( 
-			INCLUDE_PATH => join(":", @paths),
+			INCLUDE_PATH => join(":", $self->template_paths),
 			ENCODING => 'utf8' ,
 			RECURSION => 1 ,
 			FILTERS => {
@@ -479,8 +477,8 @@ sub template_paths {
 	my @paths;
 	if ( $self->dir_config('path_template') ) {
 		foreach my $path (split(/:/, $self->dir_config('path_template'))) {
-			if ( $path && $self->{user}->locale() && -d ( $path . "/" . $self->{user}->locale() ) ) { push(@paths, $path . "/" . $self->{user}->locale()); }
-			if ( -d $path ) { push(@paths, $path); }
+			push(@paths, $path . "/" . $self->{user}->locale()) if ( $path && $self->user->locale() && -d ( $path . "/"  . $self->user->locale() ) );
+			push(@paths, $path) if ( -d $path );
 		}
 	}
 	return(@paths);
