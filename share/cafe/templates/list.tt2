@@ -1,8 +1,8 @@
 [% IF list.list %]
 <table 
 	class="formsection"
+	id="[% list.identifier %]"
 	[% IF list.definition.form %]
-		id="[% list.identifier %]"
 		record_key="[% list.primary_keys.join(',') %]"
 		[% IF list.definition.form.url %]record_url = "[% list.definition.form.url %]"[% END %]
 		[% IF list.definition.form.method_get %]record_method_get = "[% list.definition.form.method_get %]"[% END %]
