@@ -345,6 +345,7 @@ sub load {
 	my ($self, $force) = @_;
 	my ($sth, $row, $key);
 
+
 	#Try memcache if possible
 	if ( $self->primary_defined() && (! $self->{_loaded}) && (! $force) && $self->root()->memd() ) {
 		if ( $self->is_primary_values() ) {
@@ -380,6 +381,7 @@ sub load {
 		}
 	}
 
+
 	#Read data from db
 	if ( $self->primary_defined() && ! $self->{_loaded} || $force ) {
 		if ( $self->{_definition} ) {
@@ -411,12 +413,9 @@ sub load {
 				}
 				$self->{$key} = $row->{$key};
 			}
+			#Save loaded data to cache
+			$self->savetocache();	
 		}
-		
-		$sth->finish();
-		
-		#Save loaded data to cache
-		$self->savetocache();	
 	}
 }
 #}}}
