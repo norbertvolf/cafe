@@ -249,8 +249,8 @@ sub new {
 	$instance->{parent} = $parent;
 
 	#Weaken circular references
-	if ( ref($instance->{root}) ) { weaken($instance->{root}); }
-	if ( ref($instance->{parent}) ) { weaken($instance->{parent}); }
+	weaken($instance->{root}) if ( ref($instance->{root}) );
+	weaken($instance->{parent}) if ( ref($instance->{parent}) );
 
 	#Third argument is HASH it means you put all definitions thru this HASH
 	if ( ref($params[0]) eq "HASH" ) {
@@ -271,6 +271,8 @@ sub new {
 			my $column = $instance->{_definition}->{columns}->{$key};
 			$column->{url}->{prefix} = $root->rich_uri($column->{url}->{prefix}) if ( exists($column->{url}) && ! $column->{url}->{nobaseurl} );
 			$column->{select}->{method} = $root->rich_uri($column->{select}->{method}) if ( exists($column->{select}) && exists($column->{select}->{method}));
+			$column->{autocomplete}->{method} = $root->rich_uri($column->{autocomplete}->{method}) if ( exists($column->{autocomplete}) && exists($column->{autocomplete}->{method}));
+			$column->{autocomplete}->{method_get} = $root->rich_uri($column->{autocomplete}->{method_get}) if ( exists($column->{autocomplete}) && exists($column->{autocomplete}->{method_get}) );
 		}
 	}
 	if ( exists($instance->{_definition}->{autoloaders}) ) {
@@ -288,16 +290,10 @@ sub new {
 		$form->{method_del} = $root->rich_uri($form->{method_del});
 	}
 
-	if ( $root && $root->{user} ) { 
-		$instance->{stateuser} = $root->{user}->iduser(); 
-	}
+	$instance->{stateuser} = $root->{user}->iduser() if ( $root && $root->{user} );
 	$instance->{state} = 0;
 	$instance->{statestamp} = localtime();
-
-	if ( ! defined($instance->{_definition}->{ttl}) ) {
-		$instance->{_definition}->{ttl} = CAFE_TTL;
-	}
-
+	$instance->{_definition}->{ttl} = CAFE_TTL if ( ! defined($instance->{_definition}->{ttl}) );
 	return $instance;
 }
 #}}}
