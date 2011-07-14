@@ -17,7 +17,6 @@ sub new {
 	bless($instance);
 }
 #}}}
-
 #{{{ die
 sub die {
 	my $self = shift;
@@ -39,7 +38,6 @@ sub die {
 	die $message;
 }
 #}}}
-
 #{{{ print_stack
 sub print_stack {
 	my $self = shift;
