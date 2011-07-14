@@ -249,9 +249,12 @@ sub set_local_locale {
 }
 #}}}
 #{{{ post_request
-=item post_request
-#Return post request
+=head3 C<post_request>
+
+Return post request
+
 =cut
+
 sub post_request {
 	my ($self, $url, $args) = @_;
 	
@@ -292,8 +295,10 @@ sub generate_params {
 }
 #}}}
 #{{{ parse
-=item parse
+=head3 C<parse>
+
 Parsing of http request arguments
+
 =cut
 sub parse {
 	my ($self, $content) = @_;

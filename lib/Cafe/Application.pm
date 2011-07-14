@@ -93,6 +93,7 @@ Cafe::Application - Method for handle client requests bussines logic classes
 Join application as Apache module to web server
 
 =cut
+
 sub handler : method {
 	my ($class, $r) = @_;
 	my $app;
@@ -108,19 +109,14 @@ sub handler : method {
 }
 #}}}
 #{{{ new
-=head2 new()
+=head3 new()
 
 Contructor of Cafe::Application class. Prepare default values of properties.
 
-=head3 Parameters
-
-=over
-
-=item $r - instance of Apache2::Request, used for reading data from client
-
-=back
+$r - instance of Apache2::Request, used for reading data from client
 
 =cut
+
 sub new {
 	my ($self, $r) = @_;
 	
@@ -352,17 +348,14 @@ sub clean {
 }
 #}}}
 #{{{rpc_del
-=head2 rpc_del()
+=head3 C<rpc_del>
 
 template of delete method by json
-=head3 Parameters
-=over
 
-=item $class - class name
+$class - class name
 
-=item $right - idright, if not defined method is allowed for all
+$right - idright, if not defined method is allowed for all
 
-=back
 
 =cut
 sub rpc_del {

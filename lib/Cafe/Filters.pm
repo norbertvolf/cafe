@@ -541,35 +541,35 @@ sub a2ps {
 		close(PDF);
 		unlink($tmpfile);
 		return $pdf;
-=pod
-		Not defined a2ps params
-		--rows=NUM number of rows per sheet
-		--major=DIRECTION first fill (DIRECTION=) rows, or columns -1, -2, ..., -9 predefined font sizes and layouts for 1.. 9 virtuals
-		-A, --file-align=MODE align separate files according to MODE (fill, rank page, sheet, or a number)
-		-j, --borders* print borders around columns
-		--margin[=NUM] define an interior margin of size NUM The options -1.. -9 affect several primitive parameters to set up predefined layouts with 80 columns. Therefore the order matters: '-R -f40 -2' is equivalent to '-2'. To modify the layout, use '-2Rf40', or compose primitive options ('--columns', '--font-size' etc.).  Virtual pages:
-		--line-numbers=NUM precede each NUM lines with its line number
-		-C alias for --line-numbers=5
-		-f, --font-size=SIZE use font SIZE (float) for the body text
-		-m, --catman process FILE as a man page (same as -L66)
-		-T, --tabsize=NUM set tabulator size to NUM
-		--non-printable-format=FMT specify how non-printable chars are printed
 
-		Headings:
-		-B, --no-header no page headers at all
-		-u, --underlay[=TEXT] print TEXT under every page
+		#Not defined a2ps params
+		#--rows=NUM number of rows per sheet
+		#--major=DIRECTION first fill (DIRECTION=) rows, or columns -1, -2, ..., -9 predefined font sizes and layouts for 1.. 9 virtuals
+		#-A, --file-align=MODE align separate files according to MODE (fill, rank page, sheet, or a number)
+		#-j, --borders* print borders around columns
+		#--margin[=NUM] define an interior margin of size NUM The options -1.. -9 affect several primitive parameters to set up predefined layouts with 80 columns. Therefore the order matters: '-R -f40 -2' is equivalent to '-2'. To modify the layout, use '-2Rf40', or compose primitive options ('--columns', '--font-size' etc.).  Virtual pages:
+		#--line-numbers=NUM precede each NUM lines with its line number
+		#-C alias for --line-numbers=5
+		#-f, --font-size=SIZE use font SIZE (float) for the body text
+		#-m, --catman process FILE as a man page (same as -L66)
+		#-T, --tabsize=NUM set tabulator size to NUM
+		#--non-printable-format=FMT specify how non-printable chars are printed
 
-		Input:
-		-a, --pages[=RANGE] select the pages to print
-		-c, --truncate-lines* cut long lines
-		-i, --interpret* interpret tab, bs and ff chars
-		--end-of-line=TYPE specify the eol char (TYPE: r, n, nr, rn, any)
-		-X, --encoding=NAME use input encoding NAME
-		--stdin=NAME set the name of the input file stdin
-		--print-anyway* force binary printing
-		-Z, --delegate* delegate files to another application
-		--toc[=TEXT] generate a table of content When delegations are enabled, a2ps may use other applications to handle the processing of files that should not be printed as raw information, e.g., HTML PostScript, PDF etc.
-=cut
+		#Headings:
+		#-B, --no-header no page headers at all
+		#-u, --underlay[=TEXT] print TEXT under every page
+
+		#Input:
+		#-a, --pages[=RANGE] select the pages to print
+		#-c, --truncate-lines* cut long lines
+		#-i, --interpret* interpret tab, bs and ff chars
+		#--end-of-line=TYPE specify the eol char (TYPE: r, n, nr, rn, any)
+		#-X, --encoding=NAME use input encoding NAME
+		#--stdin=NAME set the name of the input file stdin
+		#--print-anyway* force binary printing
+		#-Z, --delegate* delegate files to another application
+		#--toc[=TEXT] generate a table of content When delegations are enabled, a2ps may use other applications to handle the processing of files that should not be printed as raw information, e.g., HTML PostScript, PDF etc.
+
 	};
 };
 # }}}

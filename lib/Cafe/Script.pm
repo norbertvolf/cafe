@@ -234,16 +234,12 @@ sub dir_config {
 }
 #}}}
 #{{{ to_time_piece
-=head2 to_time_piece
+=head3 C<to_time_piece>
 
 Convert string with date in %Y-%m-%d %H:%M:%S
 format to instance of Time::Piece class
-
-=over Parameters
-
-=item $value - input string with date and time
-
-=item return instance of Time::Piece
+$value - input string with date and time
+return instance of Time::Piece
 
 =back 
 

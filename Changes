@@ -1,3 +1,13 @@
+libcafe-application-perl (0.8.22-1) stable; urgency=low
+
+  * rich uri to autocomplete methods
+  * new version of Cafe based on Mojo framework
+  * remove white characters
+  * save record to cache only if record is loaded from database
+  * move templates in MANIFEST
+
+ -- Norbert Volf <norbert@volf.eu>  Thu, 14 Jul 2011 16:49:00 +0200
+
 libcafe-application-perl (0.8.21-1) stable; urgency=low
 
   * generate identifier from whole class name
