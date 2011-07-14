@@ -279,9 +279,12 @@ sub post_request {
 }
 #}}}
 #{{{ generate_params
-=item generate_params
+=head3 C<generate_params>
+
 post parameters string generation
+
 =cut
+
 sub generate_params {
 	my ($self, $params) = @_;
 	my $string = "";
@@ -300,6 +303,7 @@ sub generate_params {
 Parsing of http request arguments
 
 =cut
+
 sub parse {
 	my ($self, $content) = @_;
 	my ($key, $name, $index, $item);

@@ -241,8 +241,6 @@ format to instance of Time::Piece class
 $value - input string with date and time
 return instance of Time::Piece
 
-=back 
-
 =cut 
 sub to_time_piece {
 	my ( $self, $value ) = @_;
