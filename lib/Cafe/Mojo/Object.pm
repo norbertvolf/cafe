@@ -62,9 +62,9 @@ sub debug {
 
 	while ( my $param = shift ) {
 		if ( ref($param) eq "ARRAY" || ref($param) eq "HASH" ) {
-			$self->root->log->debug(Dumper($param));
+			$self->root->app->log->debug(Dumper($param));
 		} else {
-			$self->root->log->debug($param);
+			$self->root->app->log->debug($param);
 		}
 	}
 }

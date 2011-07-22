@@ -56,7 +56,7 @@ sub check {
 	#Exists entity key
 	$self->die("Not defined entity.", __LINE__) if ( ! exists($def->{entity}) || ! defined($def->{entity}) ) ;
 	#Add dbh from root if not exists
-	$def->{dbh} = $self->root->dbh if ( ! exists($def->{dbh}) );
+	$def->{dbh} = $self->root->app->dbh if ( ! exists($def->{dbh}) );
 	return($def);
 }
 #}}}
@@ -90,7 +90,7 @@ sub load {
 			my @pkv =  map { my $col = $_->{key};eval{$self->$col}; } @pkc;
 			#Prepare query to fetch data from pgsql database
 			my $query = "SELECT * FROM " . $self->entity . " WHERE " . join(" AND ",  map { "$_->{key} = ?" } @pkc );
-			$self->debug("$query (". join (',', @pkv) . ")") if ( $self->root->mode('development') );
+			$self->debug("$query (". join (',', @pkv) . ")") if ( $self->root->app->mode('development') );
 			#Execute query
 			my $sth = $self->dbh->prepare($query);
 			$sth->execute(@pkv);
@@ -119,18 +119,18 @@ sub hash {
 	foreach my $key (sort(keys(%{$self->definition->{columns}}))) {
 		if ( $self->{$key} && $self->definition->{columns}->{$key}->{type} == Cafe::Class::DB_DATE ) {
 			#Format datetime attributes
-			$self->{root}->set_local_locale() if ( ! $unlocalized);
+			#$self->{root}->set_local_locale() if ( ! $unlocalized);
 			$data->{$key} = defined($data->{$key}) ? $self->{$key}->strftime("%x") : undef;
-			$self->{root}->restore_local_locale() if (! $unlocalized);
+			#$self->{root}->restore_local_locale() if (! $unlocalized);
 		} elsif ( $self->{$key} && $self->definition->{columns}->{$key}->{type} == Cafe::Class::DB_NUMERIC ) {
 			#Format numeric attributes
-			$self->{root}->set_local_locale() if ( ! $unlocalized);
+			#$self->{root}->set_local_locale() if ( ! $unlocalized);
 			if ( exists($self->definition->{columns}->{$key}->{format}) ) {
 				$data->{$key} = sprintf("$self->definition->{columns}->{$key}->{format}", $self->{$key});
 			} else {
 				$data->{$key} = sprintf("%.2f", $self->{$key});
 			}
-			$self->{root}->restore_local_locale() if (! $unlocalized);
+			#$self->{root}->restore_local_locale() if (! $unlocalized);
 		} elsif ( defined($self->{$key}) )  {
 			$data->{$key} = "$self->{$key}";
 		} else {
@@ -147,7 +147,7 @@ sub hash {
 	$data->{message} = $self->message;
 	$data->{okay} = $self->okay;
 	$data->{global} = {}; 
-	$data->{global}->{message} = $self->root->message; 
+	$data->{global}->{message} = $self->root->app->message; 
 	return($data);
 }
 #}}}
@@ -199,7 +199,7 @@ sub search {
 	#Prepare query to fetch data from pgsql database
 	my @params = map { $params{$_} } keys(%params);
 	my $query = "SELECT * FROM " . $self->entity . " WHERE " . join(" AND ",  map { "$_ = ?" } keys(%params) );
-	$self->debug("$query (". join (',', @params) . ")") if ( $self->root->mode('development') );
+	$self->debug("$query (". join (',', @params) . ")") if ( $self->root->app->mode('development') );
 	#Execute query
 	my $sth = $self->dbh->prepare($query);
 	$sth->execute(@params);
