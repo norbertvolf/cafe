@@ -195,10 +195,12 @@ sub controller {
 		my ($buf, $js);
 		while( $r->read($buf,$len) ) { $js .= $buf; }
 		my $params = $json->decode($js);
-		my $method = $self->{methods}->{$self->method($r->uri())};
-		my $retval = &$method($params);
-		#Encode hash to json
-		$self->output($json->encode($self->clean_struct($retval)));
+
+		if ( my $method = $self->{methods}->{$self->method($r->uri())} ) {
+			my $retval = &$method($params);
+			#Encode hash to json
+			$self->output($json->encode($self->clean_struct($retval)));
+		}
 		$self->content_type("text/plain;charset=UTF-8"); #Inititalization o content_type from ContentType header
 		$self->output_type(RAW); #Initialization of raw data
 	} elsif ( $r->param('type') && $r->param('type') eq 'json' ) {
@@ -213,25 +215,25 @@ sub controller {
 			my ($buf, $js);
 			while( $r->read($buf,$len) ){ $js .= $buf; }
 			my $hash = $json->decode($js);
-			my $method = $self->{methods}->{$self->method($hash->{method})};
-			$retval = &$method(@{$hash->{params}});
-			$retval = {
-				id     => $hash->{id},
-				result => $retval,
-				error  => undef,
-			};
-			$retval = $self->clean_struct($retval);
+			if ( my $method = $self->{methods}->{$self->method($hash->{method})} ) {
+				$retval = &$method(@{$hash->{params}});
+				$retval = {
+					id     => $hash->{id},
+					result => $retval,
+					error  => undef,
+				};
+				$retval = $self->clean_struct($retval);
+			}
 		} elsif ( $r->method eq 'GET' ) {
-			my $method = $self->{methods}->{$self->method($r->param('method') ? $r->param('method') : $r->uri() )};
-			$retval = &$method({%{$r->param()}});
+			if ( my $method = $self->{methods}->{$self->method($r->param('method') ? $r->param('method') : $r->uri() )} ) {
+				$retval = &$method({%{$r->param()}});
+			}
 		}
 		#Encode hash to json
 		$self->output($json->encode($retval));
 		$self->content_type("text/plain;charset=UTF-8"); #Inititalization o content_type from ContentType header
 		$self->output_type(RAW); #Initialization of raw data
-	} elsif ( $r->param('type') && $r->param('type') eq 'xmlrpc' ) {
-		#Check input data
-		$self->die("Cafe::Application::controller",  "XML-RPC data is not send by POST method", __LINE__) if ( $r->method ne 'POST' );
+	} elsif ( $r->method eq 'POST' && $r->headers_in->{"Content-Type"} =~ /text\/xml/ ) { #Handle XML RPC requests
 		my $len  = $r->headers_in()->get('Content-length');
 		$self->die("Cafe::Application::controller",  "XML-RPC data is out of limit", __LINE__) if ( MAX_CONTENT_LENGTH < $len );
 
@@ -243,27 +245,20 @@ sub controller {
 		$RPC::XML::FORCE_STRING_ENCODING = 1;
 		
 		my $resp = RPC::XML::Parser->new()->parse($xml);
-		if (ref($resp)) { 
-			#Call method from xmlrpc
-			my @params;
-			foreach my $arg (@{$resp->args}) {
-				push(@params, $arg->value);
+		if ( ref($resp) ) {
+			if ( my $method = $self->{methods}->{$self->method($resp->name && ! ( $resp->name eq 'call' ) ? $resp->name : $r->uri() )} ) { 
+				#Prepare parameters
+				my @params = map { $_->value } @{$resp->args};
+				#Call method and create XMLRPC response
+				my $retval = &$method(@params);
+				my $response = RPC::XML::response->new($retval);
+				$self->output($response->as_string);
 			}
-			my $method = $self->{methods}->{$self->method($resp->name)}; 
-			my $retval = &$method(@params);
-			#$retval = RPC::XML::smart_encode($retval);
-			my $response = RPC::XML::response->new($retval);
-			$self->output($response->as_string());
-			$self->output_type(RAW); #Initialization of raw data
 		}
+		$self->output_type(RAW); #Initialization of raw data
 	} else {
 		my $method;
-		eval {
-			$method = $self->{methods}->{$self->method($r->param('method') ? $r->param('method') : $r->uri() )};
-		};
-		if ( $@ ) {
-			$self->{status} = Apache2::Const::NOT_FOUND;
-		} else {
+		if ( $method = $self->{methods}->{$self->method($r->param('method') ? $r->param('method') : $r->uri() )} ) {
 			my %params = $r->param();
 			%params = (%params, $self->uri_params) if ( $self->is_varmethod );
 			&$method(keys(%params) ? \%params : undef);
@@ -310,7 +305,6 @@ sub view {
 				$r->log_reason($self->tmpl()->error());
 			}
 			$self->restore_local_locale();
-		} elsif ( $self->content_type eq "application/vnd.oasis.opendocument.text") {
 		} else {
 			$r->no_cache( -1 );
 			$r->rflush();
@@ -1001,7 +995,7 @@ sub method {
 			}
 		}
 		$self->{_method} = $method if ( ! $self->{_method} && exists( $self->{methods}->{$method} ) );
-		$self->die("Cafe::Application::method",  "Method '$method' not found", __LINE__) if ( ! $self->{_method} );
+		$self->{status} = Apache2::Const::NOT_FOUND if ( ! $self->{_method} );
 	}
 	return($self->{_method});
 }
