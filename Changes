@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.24-1) stable; urgency=low
+
+  * add xmlrpc interface based on Content Type
+
+ -- Norbert Volf <norbert@volf.eu>  Tue, 6 Sep 2011 16:06:20 +0200
+
 libcafe-application-perl (0.8.23-1) stable; urgency=low
 
   * use Mojolicious::Controller as root class of Cafe::Mojo::*
