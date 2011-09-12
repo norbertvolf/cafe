@@ -798,7 +798,7 @@ sub parseproperty {
 	} else {
 		if ( $column->{type} == DB_VARCHAR || $column->{type} == DB_FULLTEXT ) {
 			# Now we will get internal server error instead of wrong behavior
-			$self->die("Cafe::Class::parseproperty", "You have to define opts value when using DB_VARCHAR type!", __LINE__) if ( ! defined($column->{opts}) );
+			$self->die("Cafe::Class::parseproperty", "You have to define opts value when using DB_FULLTEXT type!", __LINE__) if ( ! defined($column->{opts}) );
 			#Check varchar values. If length of varchar value has zero AF consider value for NULL
 			$column->{ok} = 0 if ( length($value) > $column->{opts} || ( length($value) == 0 && $column->{null} !=  DB_NULL ) );
 			$column->{changed}= 1 if ( 
