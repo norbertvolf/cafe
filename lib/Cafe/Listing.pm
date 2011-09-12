@@ -583,7 +583,7 @@ sub prepare_parameters {
 		} elsif ( $column->{type} && $column->{type} == Cafe::Class::DB_FULLTEXT ) {
 			my $value;
 			eval("\$value = \$self->$key()");
-			$value =~ s/ /+/g if ($value);
+			$value =~ s/ /&/g if ($value);
 			$self->{params}->{$key} = { "value" => $value, type => { pg_type => PG_VARCHAR } };
 		} else {
 			$self->{params}->{$key} = { "value" => $self->{$key}, type => { pg_type => PG_VARCHAR } };
