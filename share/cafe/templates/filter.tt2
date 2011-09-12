@@ -26,7 +26,16 @@
 					<span class="join">
 					[% IF column.label %]<label for="[% column.key %]">[% getstring(column.label) %]:</label>[% END %]
 					
-					[% IF column.input == 'select'%]
+					[% IF column.input == 'checkbox' %]
+						<input 
+							type="checkbox" 
+							class="controltext" 
+							[% IF column.tags.input.style %]style="[% column.tags.input.style %]"[% END %] 
+							name="[% key %]" 
+							[% IF list.$key  %]checked[% END %] 
+							value="1"
+						/>
+					[% ELSIF column.input == 'select'%]
 						[% FILTER collapse %]
 						<select class="controltext" [% IF style %]style="[% style %]" [% END %]name="[% key %]">
 						[% IF column.select.autoloader_filter %]
@@ -71,9 +80,14 @@
 		[% IF tip %]
 		<div class="controlsection">
 			<div style="float:left;width:20px;height:20px;background:transparent url(/images/sprite.png) repeat-x left -1250px;"></div>
-			[% getstring(tip) %]
+			[% IF list.message %]
+				<span style="color:red;">[% list.message %]</span>
+			[% ELSE %]
+				[% getstring(tip) %]
+			[% END %]
 		</div>
 		[% END %]
+
 	</fieldset>
 </form>
 [% ELSIF buttons %]
@@ -87,5 +101,6 @@
 		[% getstring(tip) %]
 	</div>
 	[% END %]
+	[% list %]
 </fieldset>
 [% END %]
