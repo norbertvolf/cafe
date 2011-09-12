@@ -1,6 +1,7 @@
 package Cafe::NamedQuery;
 use utf8;
 use strict;
+use warnings;
 use vars qw($DEBUG);
 use DBI qw(:sql_types);
 use Data::Dumper;
