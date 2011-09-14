@@ -990,7 +990,7 @@ sub gethash() {
 			if (! $unlocalized) {
 				$self->{root}->set_local_locale();
 			}
-			$data->{$key} = defined($data->{$key}) ? $self->{$key}->strftime("%x") : undef;
+			$data->{$key} = defined($self->{$key}) ? $self->{$key}->strftime("%x") : undef;
 			if (! $unlocalized) {
 				$self->{root}->restore_local_locale();
 			}
