@@ -64,6 +64,8 @@
 					[% IF column.rule && column.autocomplete.identifier %]autocomplete_identifier = "[% column.autocomplete.identifier  %]"[% END %]
 					[% IF column.rule && column.autocomplete.description %]autocomplete_description = "[% column.autocomplete.description  %]"[% END %]
 					[% IF column.rule && column.autocomplete.not_found %]autocomplete_not_found = "[% getstring(column.autocomplete.not_found)  %]"[% END %]
+					[% IF column.rule && column.input && column.input == 'select' && column.tags.select.style %] input_style = "[% column.tags.select.style  %]" [% END %]
+					[% IF column.rule && column.input && column.input == 'text' && column.tags.input.style %] input_style = "[% column.tags.input.style  %]" [% END %]
 				>
 				[% IF column.input == 'select' %]
 					[% IF column.select.autoloader %]
