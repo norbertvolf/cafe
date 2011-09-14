@@ -88,15 +88,15 @@ while (<STDIN>) { # like "while(defined($_ = <STDIN>)) {"
 			if ( $counter > 1 ) {
 				$def->{label} = join(" ",  map(ucfirst, split(/_/, $column)));
 				$def->{input} = "text";
-				$def->{style} = {};
+				$def->{tags} = { input => {} };
 				if ( $type =~ /integer/ )  {
-					$def->{style}->{input} = 'width:4em;';
+					$def->{tags}->{input}->{style} = 'width:4em;';
 				} elsif ( $type =~ /character/ ) {
-					$def->{style}->{input} = "width:$def->{opts}em;";
+					$def->{tags}->{input}->{style} = "width:$def->{opts}em;";
 				} elsif ( $type =~ /timestamp|date/ ) {
-					$def->{style}->{input} = 'width:8em;';
+					$def->{tags}->{input}->{style} = 'width:8em;';
 				} elsif ( $type =~ /numeric|float/ ) {
-					$def->{style}->{input} = 'width:6em;';
+					$def->{tags}->{input}->{style} = 'width:6em;';
 				}
 			} else {
 				$def->{label} = 'Identifier';
@@ -175,9 +175,9 @@ foreach my $level1 (@{$definition->{columns}}) {
 	if ( exists ($level1->{position}) ) {
 		$output .= "\t\t\t\t\tposition => $level1->{position},\n";
 	}
-	if ( exists ($level1->{style}) && exists ($level1->{style}->{input})  ) {
-		$output .= "\t\t\t\t\tstyle => {\n";
-		$output .= "\t\t\t\t\t\tinput => '$level1->{style}->{input}',\n";
+	if ( exists ($level1->{tags}) && exists ($level1->{tags}->{input}) && exists($level1->{tags}->{input}->{style}) ) {
+		$output .= "\t\t\t\t\ttags => {\n";
+		$output .= "\t\t\t\t\t\tinput => { style => '$level1->{tags}->{input}->{style}' },\n";
 		$output .= "\t\t\t\t\t},\n";
 	}
 
