@@ -1,3 +1,15 @@
+libcafe-application-perl (0.8.25-1) stable; urgency=low
+
+   * use tags styles instead of style definition
+   * fix problem with spaces on begin and end fulltext fields
+   * use tags instead of style definition
+   * add warnings
+   * fix die message during DB_FULLTEXT column parsing
+   * fix fulltext operators
+   * add checkbox to filters
+
+ -- Norbert Volf <norbert@volf.eu>  Wed, 14 Sep 2011 22:05:00 +0200
+
 libcafe-application-perl (0.8.24-1) stable; urgency=low
 
   * add xmlrpc interface based on Content Type
