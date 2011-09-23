@@ -6,8 +6,8 @@ use DBI;
 use Sys::Syslog;
 use URI;
 
+#{{{ new
 sub new {
-# {{{
 	my ($self, $root, $parent, $definition) = @_;
 	my ($instance) = {}; 
 	bless($instance);
@@ -50,11 +50,10 @@ sub new {
 	$instance->{root} = $root;
 
 	return $instance;
-# }}}
 }
-
+#}}}
+#{{{ export
 sub export {
-# {{{
         my ($self) = @_;
 
         foreach my $table (@{$self->{definition}->{tables}}) {
@@ -76,11 +75,10 @@ sub export {
 			}
 		}
         }
-# }}}
 }
-
+#}}}
+#{{{ export_query
 sub export_query {
-# {{{
 	my ( $self, $table ) = @_;
 	my ($sth, $last, $sth_update, $sth_delete, $sth_del_log);
 	my $cnt = 0;
@@ -213,11 +211,10 @@ sub export_query {
 	if ( $self->{definition}->{source}->{autocommit} ){
 		$self->{definition}->{source}->{dbh}->commit();
 	};
-# }}}
 }
-
+#}}}
+#{{{ last
 sub last {
-# {{{
 	my ( $self, $idlast_key_value, $newvalue ) = @_;
 	my $retval;
 
@@ -245,12 +242,14 @@ sub last {
 	if ( ! defined($retval) ) { die "Error with get last_key_value" } 
 
 	return($retval);
-# }}}
 }
-
-sub DESTROY {
-	my ($self) = @_;
+#}}}
+#{{{ root
+sub root {
+	my $self = shift;
+	return($self->{root});
 }
+#}}}
 
 1;
 
