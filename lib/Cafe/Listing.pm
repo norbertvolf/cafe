@@ -699,7 +699,7 @@ sub load {
 		}
 	}
 
-	return($self->{list});
+	return($self->list);
 }
 #}}}
 #{{{ maxpage
@@ -1113,7 +1113,7 @@ sub list {
 	my $self = shift;
 	my $list = shift;
 	$self->{list} = $list if ( defined($list) && ref($list) eq 'ARRAY');
-	return($self->{list});
+	return(wantarray ? @{$self->{list}} : $self->{list});
 }
 #}}}
 #{{{ find
