@@ -884,8 +884,10 @@ sub parseproperty {
 		$self->{$destination} = $orig;
 
 		$self->message($column->{message}, NOTRANSLATE);
-		$self->okay($column->{ok}) if ( ! $self->okay );
+		$self->okay($column->{ok}) if ( $self->okay );
 	}
+
+	$self->dump($column->{ok}, $self->okay);
 
 	#Save value to session if session memory is enabled
 	if ( $column->{default_session} ) {
@@ -990,7 +992,7 @@ sub gethash() {
 			if (! $unlocalized) {
 				$self->{root}->set_local_locale();
 			}
-			$data->{$key} = defined($self->{$key}) ? $self->{$key}->strftime("%x") : undef;
+			$data->{$key} = ref($self->{$key}) eq "Time::Piece" ? $self->{$key}->strftime("%x") : undef;
 			if (! $unlocalized) {
 				$self->{root}->restore_local_locale();
 			}
