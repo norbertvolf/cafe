@@ -1,3 +1,11 @@
+libcafe-application-perl (0.8.26-1) stable; urgency=low
+
+   * add show capability
+   * return array from list method if array is requested
+   * add root getter
+
+ -- Norbert Volf <norbert@volf.eu>  Fri, 23 Sep 2011 09:41:29 +0200
+
 libcafe-application-perl (0.8.25-1) stable; urgency=low
 
    * use tags styles instead of style definition
