@@ -81,19 +81,14 @@ sub load {
 	my %params = @_;
 
 	if ( ! $self->loaded || $params{force} ) {
-		#Find primary key columns
-		my @pkc =  grep { defined($_->{primary_key}) && $_->{primary_key} == 1 } $self->columns;
-
 		#Primary key exists do download from database
-		if ( scalar( @pkc ) ) {
-			#Prepare parameters for query
-			my @pkv =  map { my $col = $_->{key};eval{$self->$col}; } @pkc;
+		if ( scalar( $self->pkc ) ) {
 			#Prepare query to fetch data from pgsql database
-			my $query = "SELECT * FROM " . $self->entity . " WHERE " . join(" AND ",  map { "$_->{key} = ?" } @pkc );
-			$self->debug("$query (". join (',', @pkv) . ")") if ( $self->root->app->mode('development') );
+			my $query = "SELECT * FROM " . $self->entity . " WHERE " . join(" AND ",  map { "$_->{key} = ?" } $self->pkc );
+			$self->debug("$query (". join (',', $self->pkv) . ")") if ( $self->root->app->mode('development') );
 			#Execute query
 			my $sth = $self->dbh->prepare($query);
-			$sth->execute(@pkv);
+			$sth->execute($self->pkv);
 			$self->loaded(1);
 			if ( my $row = $sth->fetchrow_hashref() ) {
 				#Fill instance from model
@@ -152,7 +147,7 @@ sub hash {
 }
 #}}}
 #{{{columns
-=head3 C<columns>
+=head3 columns
 
 Return sorted (by pos) columns as array
 
@@ -163,8 +158,8 @@ sub columns {
 	return(sort { ( defined($a->{position}) ? $a->{position} : 0 )  <=> ( defined($b->{position}) ? $b->{position} : 0 ) } map { $def->{columns}->{$_}->{key} = $_;$def->{columns}->{$_} } keys(%{$def->{columns}}));
 }
 #}}}
-#{{{eniity
-=head3 C<eniity>
+#{{{entity
+=head3 C<entity>
 
 Return entity name from definition
 
@@ -213,6 +208,139 @@ sub search {
 	return($self);
 }
 #}}}
+#{{{ save
+=head3 save
+
+Save to database instance of Cafe::Mojo::Class. Class must 
+contain $self->{_definition}->{entity}. For new identifier 
+you must define   $self->{_definition}->{sequence}.
+You must also define columns see SYNOPSIS.
+
+If memcached_servers option is defined in apache configuration
+save method also save data to memcached server
+
+=cut 
+sub save {
+	my $self = shift;
+	if ( exists($self->definition->{columns}->{stateuser}) && $self->root->user) {
+		$self->stateuser(defined($self->root->user->iduser) ? $self->root->user->iduser : 0);
+	}
+
+	#Set last modified time
+	if ( exists($self->definition->{columns}->{statestamp}) ) {
+		$self->{statestamp} = localtime();
+	}
+
+	#Set state bits 
+	if ( $self->definition->{columns}->{state} ) {
+		$self->state(0) unless ( defined($self->state) );
+		if ( ($self->state & 1) == 0 ) {
+			$self->state($self->state | 1);
+		} elsif( ($self->state & 1) == 1 && ($self->state & 2) == 0 ) {
+			$self->state($self->state | 2);
+		}
+	}
+
+	#Check save needs 
+	if ( $self->definition && $self->entity && scalar($self->columns) && scalar($self->pk()) ) {
+		if ( scalar($self->pkc) ==  1 && scalar( grep { defined } $self->pkv ) == 0 && $self->sequence ) { 
+			#Prepare INSERT for entities with sequence and single primary key
+			#Find next primary key value
+			my $sth = $self->dbh->prepare(q(SELECT nextval(?) as id));
+			$sth->execute($self->sequence);
+			if ( my $row = $sth->fetchrow_hashref() ) {
+				my $col = ($self->pkc)[0]->{key};
+				eval{$self->$col($row->{id})};
+				$self->debug("New sequence value from " . $self->sequence . " = $row->{id}") if ( $self->root->app->mode('development') );
+			} else {
+				$self->die("Cant fetch next value from sequence "  . $self->sequence, __LINE__);
+			}
+			#Pripravime sql dotaz
+			my $query = "INSERT INTO " . $self->entity . "(" . join(", ", map { $_->{key} } $self->columns) . ") VALUES (" . join(", ", map { "?" } $self->columns) . ")";
+			$sth = $self->dbh->prepare($query);
+			$self->root->set_locale("C");
+			$sth->execute();
+			$self->root->restore_locale();
+		} elsif ( scalar($self->pkc) == 1 && scalar( grep { defined } $self->pkv ) == 0 ) {
+			#Prepare UPDATE query for single primary keys
+			my $query = "UPDATE " . $self->entity . " SET " . join(" = ?,", map { $_->{key} } $self->attrc) . " = ? WHERE " . join(" = ?,", map { $_->{key} } $self->pkc) . " = ?";
+			$self->debug("$query (". join (',', $self->attrv, $self->pkv) . ")") if ( $self->root->app->mode('development') );
+			my $sth = $self->dbh->prepare($query);
+			$self->root->app->set_locale;
+			$sth->execute($self->attrv, $self->pkv);
+			$self->root->app->restore_locale;
+		} else {
+			$self->die("Not defined save method for this combination of primary keys", __LINE__);
+		}
+	} else {
+		$self->die("Not all needs for saving record to database.", __LINE__);
+	}
+}
+#}}}
+#{{{ pkc
+=head3 pkc
+
+Return list of primary keys columns
+
+=cut
+sub pkc {
+	my $self = shift;
+	$self->{_pkc} = [ grep { defined($_->{primary_key}) && $_->{primary_key} == 1 } $self->columns ] unless ( defined($self->{_pkc}) );
+	return(@{$self->{_pkc}});
+}
+#}}}
+#{{{ pkv
+=head3 pkv
+
+Return list of primary keys values
+
+=cut
+sub pkv {
+	my $self = shift;
+	$self->{_pkv} = [ map { my $col = $_->{key};eval{$self->$col}; } $self->pkc ];
+	return(@{$self->{_pkv}});
+}
+#}}}
+#{{{ attrc
+=head3 attrc
+
+Return list of attribute columns (no primary keys columns)
+
+=cut
+sub attrc {
+	my $self = shift;
+	$self->{_attrc} = [ grep { ! $_->{primary_key} } $self->columns ] unless ( defined($self->{_attrc}) );
+	return(@{$self->{_attrc}});
+}
+#}}}
+#{{{ attrv
+=head3 attrv
+
+Return list of attribute values (no primary keys values)
+
+=cut
+sub attrv {
+	my $self = shift;
+	$self->{_attrv} = [ map { my $col = $_->{key};eval{$self->$col}; } $self->attrc ];
+	return(@{$self->{_attrv}});
+}
+#}}}
+#{{{ sequence
+=head3 sequence
+
+Return name sequence in column definiton (if is defined more than one sequences return first sequence)
+
+=cut
+sub sequence {
+	my $self = shift;
+	my @sec = grep { $_->{sequence} } $self->pkc;
+	if ( scalar(@sec) ) {
+		return($sec[0]->{sequence});
+	} else {
+		$self->die("Sequence is not defined", __LINE__);
+	}
+}
+#}}}
 #{{{AUTOLOAD
 =head3 AUTOLOAD
 
@@ -247,5 +375,4 @@ sub AUTOLOAD {
 	}
 }
 #}}}
-
 1;
