@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.27-1) stable; urgency=low
+
+   * fix messaging (pass okay thru parseproperty)
+
+ -- Norbert Volf <norbert@volf.eu>  Fri, 26 Sep 2011 18:01:29 +0200
+
 libcafe-application-perl (0.8.26-1) stable; urgency=low
 
    * add show capability
