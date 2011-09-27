@@ -887,8 +887,6 @@ sub parseproperty {
 		$self->okay($column->{ok}) if ( $self->okay );
 	}
 
-	$self->dump($column->{ok}, $self->okay);
-
 	#Save value to session if session memory is enabled
 	if ( $column->{default_session} ) {
 		$self->{root}->{session}->{ref($self)} = {} if ( ! defined($self->{root}->{session}->{ref($self)}) );
