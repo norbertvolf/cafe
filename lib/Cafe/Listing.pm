@@ -668,11 +668,7 @@ sub load {
 				$self->die("Cafe::Listing::load",  "SQL Query error see above", __LINE__);
 			}
 
-			$values = [];
-			while ( $row = $query->sth()->fetchrow_hashref() ) {
-				push(@{$values}, $row);
-			}
-			$query->sth()->finish();
+			$values = $query->sth()->fetchall_arrayref({});
 
 			#If ttl is defined save data to memcache
 			if ( $self->definition->{ttl} && $self->definition->{ttl} > 0 && $self->root()->memd() ) {
@@ -695,8 +691,8 @@ sub load {
 					map { $row->{$_} = $self->to_time_piece($row->{$_}) } @dates;
 				}
 			}
-			$self->{list} = $values;
 		}
+		$self->list($values);
 	}
 
 	return($self->list);
