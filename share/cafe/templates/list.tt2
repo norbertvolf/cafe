@@ -1,4 +1,4 @@
-[% IF list.list %]
+[% IF list %]
 <table 
 	class="formsection"
 	id="[% list.identifier %]"
