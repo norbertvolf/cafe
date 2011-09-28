@@ -1109,7 +1109,7 @@ sub list {
 	my $self = shift;
 	my $list = shift;
 	$self->{list} = $list if ( defined($list) && ref($list) eq 'ARRAY');
-	return(wantarray ? @{$self->{list}} : $self->{list});
+	return($self->{list});
 }
 #}}}
 #{{{ find

@@ -1,5 +1,6 @@
 libcafe-application-perl (0.8.28-1) stable; urgency=low
 
+   * return list as reference everytime
    * show empty lists
    * use fetchall_arrayref instead of use loop
    * remove old debug info
