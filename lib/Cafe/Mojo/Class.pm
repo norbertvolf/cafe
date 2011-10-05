@@ -155,7 +155,8 @@ Return sorted (by pos) columns as array
 sub columns {
 	my $self = shift;
 	my $def = scalar(@_) ? shift : $self->definition;
-	return(sort { ( defined($a->{position}) ? $a->{position} : 0 )  <=> ( defined($b->{position}) ? $b->{position} : 0 ) } map { $def->{columns}->{$_}->{key} = $_;$def->{columns}->{$_} } keys(%{$def->{columns}}));
+	my @columns = sort { ( defined($a->{position}) ? $a->{position} : 0 )  <=> ( defined($b->{position}) ? $b->{position} : 0 ) } map { $def->{columns}->{$_}->{key} = $_;$def->{columns}->{$_} } keys(%{$def->{columns}});
+	return(wantarray ? @columns : \@columns);
 }
 #}}}
 #{{{entity
@@ -228,7 +229,8 @@ sub save {
 
 	#Set last modified time
 	if ( exists($self->definition->{columns}->{statestamp}) ) {
-		$self->{statestamp} = localtime();
+		$self->debug($self->now);
+		$self->statestamp($self->now);
 	}
 
 	#Set state bits 
@@ -242,38 +244,48 @@ sub save {
 	}
 
 	#Check save needs 
-	if ( $self->definition && $self->entity && scalar($self->columns) && scalar($self->pk()) ) {
+	if ( $self->definition && $self->entity && scalar($self->columns) && scalar($self->pkc()) ) {
 		if ( scalar($self->pkc) ==  1 && scalar( grep { defined } $self->pkv ) == 0 && $self->sequence ) { 
 			#Prepare INSERT for entities with sequence and single primary key
 			#Find next primary key value
 			my $sth = $self->dbh->prepare(q(SELECT nextval(?) as id));
-			$sth->execute($self->sequence);
+			$sth->execute($self->sequence) or die "$!";
 			if ( my $row = $sth->fetchrow_hashref() ) {
 				my $col = ($self->pkc)[0]->{key};
 				eval{$self->$col($row->{id})};
 				$self->debug("New sequence value from " . $self->sequence . " = $row->{id}") if ( $self->root->app->mode('development') );
 			} else {
-				$self->die("Cant fetch next value from sequence "  . $self->sequence, __LINE__);
+				die("Cant fetch next value from sequence "  . $self->sequence);
 			}
 			#Pripravime sql dotaz
-			my $query = "INSERT INTO " . $self->entity . "(" . join(", ", map { $_->{key} } $self->columns) . ") VALUES (" . join(", ", map { "?" } $self->columns) . ")";
+			my $query = "INSERT INTO " . $self->entity . "(" . join(", ", map { $_->{key} } ($self->pkc, $self->attrc) ) . ") VALUES (" . join(", ", map { "?" } ( $self->pkc, $self->attrc) ) . ")";
+			$self->debug("$query (". join (',', map { $_ // 'NULL' } $self->pkv, $self->attrv) . ")") if ( $self->root->app->mode('development') );
 			$sth = $self->dbh->prepare($query);
-			$self->root->set_locale("C");
-			$sth->execute();
-			$self->root->restore_locale();
+			$self->root->app->set_locale;
+			$sth->execute($self->pkv, $self->attrv) or die "$!";
+			$self->root->app->restore_locale();
 		} elsif ( scalar($self->pkc) == 1 && scalar( grep { defined } $self->pkv ) == 0 ) {
 			#Prepare UPDATE query for single primary keys
 			my $query = "UPDATE " . $self->entity . " SET " . join(" = ?,", map { $_->{key} } $self->attrc) . " = ? WHERE " . join(" = ?,", map { $_->{key} } $self->pkc) . " = ?";
 			$self->debug("$query (". join (',', $self->attrv, $self->pkv) . ")") if ( $self->root->app->mode('development') );
 			my $sth = $self->dbh->prepare($query);
-			$self->root->app->set_locale;
+			$self->root->app->set_locale("C");
 			$sth->execute($self->attrv, $self->pkv);
 			$self->root->app->restore_locale;
 		} else {
 			$self->die("Not defined save method for this combination of primary keys", __LINE__);
 		}
 	} else {
-		$self->die("Not all needs for saving record to database.", __LINE__);
+		$self->print_stack();
+		if ( ! $self->definition ) {
+			die("Not usable definition to save object`");
+		} elsif ( ! $self->entity ) {
+			die("Not defined entity (table). Entity parameter is mandatory to save object.");
+		} elsif ( ! scalar($self->columns) ) {
+			die("There is no column definitions. Columns definition is mandatory to save object.");
+		} elsif ( ! scalar($self->pkc) ) {
+			die("There is no primary key definitions. Primary key definition is mandatory to save object.");
+		}
 	}
 }
 #}}}
@@ -336,9 +348,18 @@ sub sequence {
 	my @sec = grep { $_->{sequence} } $self->pkc;
 	if ( scalar(@sec) ) {
 		return($sec[0]->{sequence});
-	} else {
-		$self->die("Sequence is not defined", __LINE__);
 	}
+}
+#}}}
+#{{{ dump
+=head3 dump
+
+Return string with dumped data
+
+=cut
+sub dump {
+	my $self = shift;
+	return(ref($self) . "::dump = {\n  " . join( "\n  ",  map { eval { "$_ => " . $self->$_ } } map { $_->{key} } $self->columns) . "\n};" );
 }
 #}}}
 #{{{AUTOLOAD
