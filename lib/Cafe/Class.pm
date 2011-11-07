@@ -1125,18 +1125,12 @@ sub AUTOLOAD {
 						$ref[$i] =~ s/ $//g;
 
 						if ( $ref[$i] =~ /('[^']+'|\d+)/ ) {
-							my $destination = '$obj->{$id[$i]}';
-							my $source = $1;
-							eval("$destination = $source") or $self->die("Cafe::Class::AUTLOADER", "bad AUTOLOAD assignment \$obj->{$id[$i]} = $1 with error : $!", __LINE__);
+							eval("\$obj->$id[$i]($1)") or $self->die(ref($self). "::AUTLOADER", "bad AUTOLOAD assignment \$obj->$id[$i]($1) = $1 with error : $!", __LINE__);
 						} elsif ( $ref[$i] =~ /\$self->/ ) {
-							my $destination = '$obj->{$id[$i]}';
-							my $source = $ref[$i];
-							eval("$destination = $source") or $self->die("Cafe::Class::AUTLOADER", "bad AUTOLOAD assignment \$obj->{$id[$i]} = \$self->{$ref[$i]} with error : $!", __LINE__);
+							eval("\$obj->$id[$i]($ref[$i])") or $self->die(ref($self). "::AUTLOADER", "bad AUTOLOAD assignment \$obj->$id[$i]($ref[$i]) with error : $!", __LINE__);
 						} else {
-							$obj->{$id[$i]} = $self->{$ref[$i]};
+							eval("\$obj->$id[$i](\$self->$ref[$i]);");
 						}
-
-
 					}
 				} elsif ( exists($autoloader->{id}) ) {
 					foreach my $id (map { s/ //g; $_} split(/,/, $autoloader->{id})) {
