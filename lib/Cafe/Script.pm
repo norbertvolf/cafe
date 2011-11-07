@@ -265,5 +265,13 @@ sub memd {
 	return(undef);
 }
 #}}}
+#{{{ conf_file
+=head2 conf_file
+
+Return used configuration file
+
+=cut 
+sub conf_file { return(shift->{_conf_file}); }
+#}}}
 
 1;
