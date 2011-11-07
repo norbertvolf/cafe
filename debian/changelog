@@ -1,3 +1,13 @@
+libcafe-application-perl (0.8.29-1) stable; urgency=low
+
+   * use methods for assingements instead of hash variables
+   * add configuration file method
+   * implement save method
+   * init first version of Mojo Listing class
+   * return list as reference every time
+
+ -- Norbert Volf <norbert@volf.eu>  Mon, 07 Nov 2011 16:07:22 +0100
+
 libcafe-application-perl (0.8.28-1) stable; urgency=low
 
    * return list as reference everytime
