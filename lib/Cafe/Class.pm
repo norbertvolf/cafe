@@ -566,10 +566,13 @@ sub nextval {
 	my ($sql);
 	#Najdeme primarni klic a pokud ma sekvenci tak generujeme klic
 	if ( $self->save_type() == 2 ) {
+		my $primary_value;
+		$primary_value = $self->primary_values->[0] if ( scalar(@{$self->primary_values()}) );
 		my $primary_key = $self->primary_key();
 		if ( 
 			$primary_key && 
-			$self->{_definition}->{columns}->{$primary_key}->{sequence}
+			$self->{_definition}->{columns}->{$primary_key}->{sequence} &&
+			! defined($primary_value)
 		) {
 			$sql = "SELECT nextval(?) as id";
 			#Je zapnute debugovani tak vypisujeme parametry a sql dotaz
@@ -682,10 +685,7 @@ sub save_type {
 		} elsif ( ! defined($self->{$key}) && ! $sequence ) {
 			#Pouze jeden klic a hodnota neni zadana chyba
 			$self->die("Cafe::Class::save_type",  "If you want write record with simple primary key withou sequence column of primary key must by definded", __LINE__);
-		} elsif ( defined($self->{$key}) &&  $sequence) {
-			#Pouze jeden klic a hodnota je zadana a existuje sequnce -> delamu update
-			$retval = 1;
-		} elsif ( defined($self->{$key}) &&  !$sequence) {
+		} elsif ( defined($self->{$key}) ) {
 			#Pouze jeden klic a hodnota je zadana a neexistuje sequnce -> zjistime jestli zaznam existuje
 			#Zkontrolujeme jestli existuje zaznam se slozenym primarnim klicem v databazi
 			$sql = "SELECT * FROM $self->{_definition}->{name} WHERE " . $self->primary_where();
