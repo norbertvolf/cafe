@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.30-1) stable; urgency=low
+
+   * resolve INSERT/UPDATE operation if primary key value is defined
+
+ -- Norbert Volf <norbert@volf.eu>  Mon, 09 Nov 2011 14:12:00 +0100
+
 libcafe-application-perl (0.8.29-1) stable; urgency=low
 
    * use methods for assingements instead of hash variables
