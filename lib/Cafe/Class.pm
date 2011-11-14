@@ -657,14 +657,8 @@ sub primary_where {
 #Vraci hodnoty primarniho klice 
 sub primary_values {
 	my ($self) = @_;
-	if ( ! defined($self->{primary_values}) ) {
-		$self->{primary_values} = [];
-		foreach my $key (@{$self->primary_keys()}) {
-			my $value = $self->{$key};
-			push(@{$self->{primary_values}},  $value);
-		}
-	}
-	return($self->{primary_values});
+	my @retval = map { eval{$self->$_} } @{$self->primary_keys};
+	return(\@retval);
 }
 #}}}
 #{{{ save_type
