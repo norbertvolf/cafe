@@ -2,14 +2,14 @@ Source: libcafe-application-perl
 Section: perl
 Priority: optional
 Build-Depends: debhelper (>= 5)
-Build-Depends-Indep: perl (>= 5.6.10-12)
+Build-Depends-Indep: perl (>= 5.10)
 Maintainer: Norbert Volf <norbert@volf.eu>
 Standards-Version: 3.8.0
 Homepage: http://search.cpan.org/dist/Cafe-Application/
 
 Package: libcafe-application-perl
 Architecture: all
-Depends: ${perl:Depends}, ${misc:Depends}, libapache2-request-perl, libjson-xs-perl, libapache2-mod-perl2, libcache-memcached-perl, libapache2-request-perl, libproc-pid-file-perl, libdbi-perl, libapache2-mod-perl2, libapache-session-perl, libapache2-mod-perl2, libdbd-pg-perl, libtemplate-perl, libapache-configfile-perl, librpc-xml-perl, libapache2-mod-perl2, libwww-perl, libtext-iconv-perl, libapache2-mod-perl2, librpc-xml-perl, libwww-perl
+Depends: ${perl:Depends}, ${misc:Depends}, libapache2-request-perl, libjson-xs-perl, libapache2-mod-perl2, libcache-memcached-perl, libproc-pid-file-perl, libdbi-perl, libapache-session-perl, libdbd-pg-perl, libtemplate-perl, libapache-configfile-perl, librpc-xml-perl, libtext-iconv-perl, libwww-perl, libintl-perl
 Description: Web framework to create database based applications
  Cafe::Application is a framework to create database base application. 
  .
