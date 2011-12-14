@@ -6,7 +6,8 @@
 				[% IF column.rule %]
 					[% key = column.key %]
 					[% format = column.format %]
-					[% style = column.style.input %]
+					[% IF column.style.input.defined %][% style = column.style.input %][% END %]
+					[% IF column.tags.input.style.defined %][% style = column.tags.input.style %][% END %]
 
 					[% IF column.type == constants.class.DB_DATE && ! style  %]
 						[% style = 'width:10em' %]
@@ -30,7 +31,7 @@
 						<input 
 							type="checkbox" 
 							class="controltext" 
-							[% IF column.tags.input.style %]style="[% column.tags.input.style %]"[% END %] 
+							[% IF style %]style="[% style %]"[% END %] 
 							name="[% key %]" 
 							[% IF list.$key  %]checked[% END %] 
 							value="1"
