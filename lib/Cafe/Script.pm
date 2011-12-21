@@ -117,41 +117,6 @@ sub error {
 	syslog("err", "$message");
 }
 #}}}
-#{{{ restore_local_locale
-=head2 restore_local_locale
-
-Reset locale from LIFO
-
-=cut
-sub restore_local_locale {
-	my ( $self ) = @_;
-
-	if ( ! $self->{local_locale} ) { $self->{local_locale} = []; }   
-	if ( scalar(@{$self->{local_locale}}) ) {
-		pop(@{$self->{local_locale}});
-		if ( scalar(@{$self->{local_locale}}) ) {
-			setlocale( LC_ALL, $self->{local_locale}->[scalar(@{$self->{local_locale}}) - 1]);
-		}
-	} else {
-		die "AF error " . __FILE__ . " line " . __LINE__ . ": Locale array is empty, when I want restore locale.";
-	}   
-}
-# }}}
-#{{{ set_local_locale
-=head2 set_local_locale
-
-Set locale and save original locale to LIFO.
-
-=cut
-sub set_local_locale {
-	my ($self, $locale) = @_;
-
-	if ( ! $locale ) { $locale = "C"; }   
-	if ( ! $self->{local_locale} ) { $self->{local_locale} = []; }   
-	setlocale( POSIX::LC_ALL, $locale );
-	push ( @{$self->{local_locale}}, $locale );
-}
-# }}}
 #{{{ location
 =head2 location 
 
