@@ -158,7 +158,9 @@ must be supported byt iconv utility and only if $key parameter is used.
 =cut 
 sub getstring {
 	my ($self, $key, $encoding, $quote) = @_;
-	my $locale = $self->{user}->locale();
+	my $locale = setlocale( POSIX::LC_ALL );
+	$locale =~ s/^([^.]+).*/$1/;
+	$locale = $locale // "C";
 
 	if ( ! exists($self->translations()->{$locale}) ) {
 		if ( exists($self->translations()->{"C"}) ) {
