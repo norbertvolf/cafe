@@ -1,3 +1,15 @@
+libcafe-application-perl (0.8.32-1) stable; urgency=low
+
+   * use system locale for getstring
+   * use class name in constructor
+   * add gettext support
+   * use set_local_locale method and restore_local_locale method from Cafe::Base
+   * accept just message in die method
+   * package is depends on libintl-perl now
+   * use tags hash in filter template
+
+ -- Norbert Volf <norbert@volf.eu>  Fri,  3 Feb 2012 16:36:00 +0100
+
 libcafe-application-perl (0.8.31-1) stable; urgency=low
 
    * method primary_values is dynamic now
