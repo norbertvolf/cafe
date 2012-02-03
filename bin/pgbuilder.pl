@@ -206,18 +206,18 @@ use strict;
 use base qw(Cafe::Class);
 
 sub new {
-	my (\$self, \$root, \$parent, \$$primarykey) = \@_;
+	my (\$class, \$root, \$parent, \$$primarykey) = \@_;
 	my \$pos = 0;
-	my (\$instance) = \$self->SUPER::new(
+	my (\$self) = \$class->SUPER::new(
 		\$root, 
 		\$parent,
 		$output
 	); 
 
-	bless(\$instance);
-	\$instance->$primarykey(\$$primarykey) if ( \$$primarykey );
-	\$instance->load() if ( \$$primarykey );	
-	return \$instance
+	bless \$self;
+	\$self->$primarykey(\$$primarykey) if ( \$$primarykey );
+	\$self->load if ( \$$primarykey );	
+	return \$self;
 }
 
 1;
