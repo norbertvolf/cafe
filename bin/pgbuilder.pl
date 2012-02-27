@@ -10,20 +10,8 @@ my $schema;
 my $table;
 my $title;
 my $definition = {
-	name => '',
+	entity => '',
 	messages => [],
-	form => {
-		url => "?type=json",
-		method_get => "",
-		method_set => "",
-		method_del => "",
-		method_del_caption => "Do you want delete",
-		method_del_url => "?method=group_search",
-		caption_edit => "Edit",
-		caption_save => "Save",
-		caption_cancel => "Cancel",
-		caption_delete => "Delete",
-	},
 	columns => [
 	],
 	autoloaders => {
@@ -42,7 +30,7 @@ while (<STDIN>) { # like "while(defined($_ = <STDIN>)) {"
 		$schema = $2;
 		$table = $3;
 		$title = join(" ",  map(ucfirst, split(/_/, $table)));
-		$definition->{name} = "$schema.$table";
+		$definition->{entity} = "$schema.$table";
 		$definition->{form}->{method_del_caption} = $definition->{form}->{method_del_caption} . " " . $title . "?";
 		$rownumber++;
 	} elsif ( $row =~ /\s*-+\+/ ) {
@@ -59,22 +47,22 @@ while (<STDIN>) { # like "while(defined($_ = <STDIN>)) {"
 		push(@{$definition->{columns}}, $def);
 
 		if ( $type =~ /integer/ )  {
-			$def->{type} = "Cafe::Class::DB_INT";
+			$def->{type} = '$c->DB_INT';
 		} elsif ( $type =~ /character/ ) {
-			$def->{type} = "Cafe::Class::DB_VARCHAR";
+			$def->{type} = '$c->DB_VARCHAR';
 			if ( $type =~ /(\d+)/ ) {
 				$def->{opts} = "$1";
 			}
 		} elsif ( $type =~ /timestamp|date/ ) {
-			$def->{type} = "Cafe::Class::DB_DATE";
+			$def->{type} = '$c->DB_DATE';
 		} elsif ( $type =~ /numeric|float/ ) {
-			$def->{type} = "Cafe::Class::DB_NUMERIC";
+			$def->{type} = '$c->DB_NUMERIC';
 		}
 
 		if ( $null =~ /not null/ )  {
-			$def->{null} = "Cafe::Class::DB_NOTNULL";
+			$def->{null} = '$c->DB_NOTNULL';
 		} else {
-			$def->{null} = "Cafe::Class::DB_NULL";
+			$def->{null} = '$c->DB_NULL';
 		}
 
 
@@ -107,7 +95,7 @@ while (<STDIN>) { # like "while(defined($_ = <STDIN>)) {"
 		if ( $counter == 1 ) {
 			$def->{primary_key} = "1";
 			$def->{sequence} = "$schema.$column";
-			$def->{null} = "Cafe::Class::DB_NULL";
+			$def->{null} = "\$c->DB_NULL";
 			$primarykey = $column;
 		}
 
@@ -131,7 +119,7 @@ $keys .= "=cut\n";
 #Generate name of persistent table
 my $output = "{\n";
 $output .= "\t\t\ttitle => '" . ucfirst($title) . "',\n";
-$output .= "\t\t\tname => '$definition->{name}',\n";
+$output .= "\t\t\tentity => '$definition->{entity}',\n";
 
 #Generate forms
 $output .= "\t\t\tform => {\n";
@@ -203,18 +191,15 @@ $output ="package " . ucfirst($schema) . "::" . join("::",  map { ucfirst($_) } 
 use utf8;
 use warnings;
 use strict;
-use base qw(Cafe::Class);
+use base qw(Mojolicious::Cafe::Class);
 
 sub new {
-	my (\$class, \$root, \$parent, \$$primarykey) = \@_;
+	my (\$class, \$c, \$$primarykey) = \@_;
 	my \$pos = 0;
-	my (\$self) = \$class->SUPER::new(
-		\$root, 
-		\$parent,
+	my \$self = \$class->SUPER::new(
+		\$c, 
 		$output
 	); 
-
-	bless \$self;
 	\$self->$primarykey(\$$primarykey) if ( \$$primarykey );
 	\$self->load if ( \$$primarykey );	
 	return \$self;
