@@ -68,7 +68,7 @@ sub restore_locale {
 }
 #}}}
 #{{{ set_locale
-=header set_locale
+=head3 set_locale
 
 Set locale and save original locale to LIFO. If $locale
 is not defined use "C".
