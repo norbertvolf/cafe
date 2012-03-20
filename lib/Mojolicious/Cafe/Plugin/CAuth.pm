@@ -20,9 +20,16 @@ sub register {
 		user => sub {
 			my $c = shift; 
 			if ( ! $c->{_user} ) {
-				my $username = $c->memd->get(join("|", "user_digest", $c->session->{digest}));
+				my $username;
 				my $class =  $c->config->{user_class};
-				eval "require $class;\$c->{_user} = new $class(\$c, \$username)";
+				eval {require $class};
+
+				if ( $c->session->{digest} ) {
+					$username = $c->memd->get(join("|", "user_digest", $c->session->{digest}));
+					eval("\$c->{_user} = new $class(\$c, \$username)");
+				} else {
+					eval("\$c->{_user} = new $class(\$c )");
+				}
 				Mojo::Exception->throw($@) if $@;
 			}
 			return($c->{_user});

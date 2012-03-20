@@ -23,22 +23,9 @@ sub register {
 			#is saved just '*'
 			$params{flash} = $params{flash} // 0;
 
-			#Prepare SMS 
-			my $sms = Ecs::SMS->new($c);
-			$sms->message($message);
-			$sms->phonenumber($to);
-			$sms->stateuser(0);
-			$sms->sentstamp(DateTime->now);
-			$sms->billed(0);
-			$sms->locale('');
-			$sms->parts(1);
-
+			#Send message as test to log
 			$to =~ s/[+ ]//g;
-			$sms->dbh->begin_work();
 			$c->app->log->debug("Phone:$to Message:$message");
-			$sms->message('*') if ($params{flash});
-			$sms->save();
-			$sms->dbh->commit();
 
 			return(1);
 		},
