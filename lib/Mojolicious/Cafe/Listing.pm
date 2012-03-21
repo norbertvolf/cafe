@@ -152,7 +152,7 @@ sub query_compiled {
 }
 #}}}
 #{{{ private query_params
-=head3 C<query_params
+=head3 C<query_params>
 
 Prepare params for compiled query 
 
