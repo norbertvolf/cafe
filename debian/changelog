@@ -1,3 +1,11 @@
+libcafe-application-perl (0.8.34-1) stable; urgency=low
+
+   * improve mojolicious support
+   * add CAuth Mojolicious plugin
+   * add Locale::Messages Mojolicious plugin
+
+ -- Norbert Volf <norbert@volf.eu>  Fri,  27 Feb 2012 16:36:00 +0100
+
 libcafe-application-perl (0.8.33-1) stable; urgency=low
 
    * add mojolicious support
