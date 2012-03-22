@@ -1,3 +1,10 @@
+libcafe-application-perl (0.8.36-1) stable; urgency=low
+
+   * add debian dependency to memcached
+   * add caramel config examples
+
+ -- Norbert Volf <norbert@volf.eu>  Fri,  22 Mar 2012 17:36:00 +0100
+
 libcafe-application-perl (0.8.35-1) stable; urgency=low
 
    * add debian dependency to Mojolicious and Apache::HtPasswd

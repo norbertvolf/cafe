@@ -54,7 +54,9 @@ WriteMakefile(
                 "share/cafe/templates/pages.tt2",
                 "share/cafe/templates/title.tt2",
                 "share/cafe/templates/toolbar.tt2",
-		"share/doc/cafe/nginx.conf",
+		"share/doc/cafe/etc/caramel.d/caramel-ce.conf",
+		"share/doc/cafe/etc/caramel.conf",
+		"share/doc/cafe/etc/nginx/sites-available/caramel-ce",
         ] },
 );
 
