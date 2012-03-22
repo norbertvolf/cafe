@@ -1,3 +1,10 @@
+libcafe-application-perl (0.8.35-1) stable; urgency=low
+
+   * add debian dependency to Mojolicious and Apache::HtPasswd
+   * add nginx config example
+
+ -- Norbert Volf <norbert@volf.eu>  Fri,  22 Mar 2012 16:36:00 +0100
+
 libcafe-application-perl (0.8.34-1) stable; urgency=low
 
    * improve mojolicious support
