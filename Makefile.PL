@@ -54,6 +54,7 @@ WriteMakefile(
                 "share/cafe/templates/pages.tt2",
                 "share/cafe/templates/title.tt2",
                 "share/cafe/templates/toolbar.tt2",
+		"share/doc/cafe/nginx.conf",
         ] },
 );
 
