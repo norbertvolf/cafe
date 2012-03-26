@@ -24,9 +24,12 @@ sub new {
 	#Add dbh from controller if not exists
 	$def->{dbh} = $self->c->dbh if ( ! exists($def->{dbh}) );
 	#Set definition of instance if check of defintion is ok
-        #Check die if there is some error
+        #Check end set definition die if there is some error
 	$self->definition($self->check($def));	
+	#Set default values
 	$self->defaults;
+	#TODO Generate getters/setters from columns
+
 	return($self);
 }
 #}}}
@@ -115,6 +118,38 @@ sub AUTOLOAD {
 			$self->{"_$method"} = $param if ( $numofprm );
 			#If is invocated method with name defined as column return value of this column
 			return($self->{"_$method"});
+		} elsif ( exists($self->definition->{autoloaders}->{$method} ) ) {
+			#If is invocated method is defined as autoloader load method
+			my $autoloader = $self->definition->{autoloaders}->{$method};
+			#Create instance 
+			if ( ! defined($self->{"_$autoloader"}) ) {
+				my $obj;
+				#Prepare destination class
+				eval("require $autoloader->{class}"); 
+				Mojo::Exception->throw("Cafe::Class::AUTLOADER: $@") if ($@);
+				eval('$obj = new ' . $autoloader->{class} . '($self->c);');
+				Mojo::Exception->throw("Cafe::Class::AUTLOADER: $@") if ($@);
+				if ( exists($autoloader->{params}) && ref( $autoloader->{params} ) eq 'HASH') {
+					foreach my $key ( keys(%{$autoloader->{params}}) ) {
+						#Clean up destination property name
+						$key =~ s/^\s*(\w+)\s*$/$1/;
+
+						#Set param value as value or as value returned from anonymous 
+						#function passed as param (anonymous function can return
+						#anything what you want
+						if ( ref($autoloader->{params}->{$key}) eq 'CODE') {
+							eval("\$obj->$key(&{\$autoloader->{params}->{\$key}}(\$self));");
+							Mojo::Exception->throw("Cafe::Class::AUTLOADER: $@") if ($@);
+						} else {
+							eval("\$obj->$key(\$autoloader->{params}->{\$key});");
+							Mojo::Exception->throw("Cafe::Class::AUTLOADER: $@") if ($@);
+						}
+					}
+				}
+				$obj->load();
+				$self->{"_$autoloader"} = $obj;
+			}
+			return($self->{"_$autoloader"});
 		} else {
 			Mojo::Exception->throw("Method $method is not defined");
 		}
@@ -122,7 +157,8 @@ sub AUTOLOAD {
 }
 #}}}
 
-#{{{ private defaults
+#Private methods
+#{{{ defaults
 =head3 C<defaults>
 
 Set default columns values
@@ -137,6 +173,5 @@ sub defaults {
 	}
 }
 #}}}
-
 
 1;
