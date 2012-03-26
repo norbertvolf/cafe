@@ -23,8 +23,6 @@ sub startup {
 	#Setup plugins
 	#I add condition for routing (see over in routes)
 	$self->plugin('Mojolicious::Cafe::Plugin::Locale::Messages');
-	#CAuth add condition for routing (see over in routes)
-	$self->plugin('Mojolicious::Cafe::Plugin::CAuth');
 	#We are using DateTime class to work with times instead of Time::Piece
 	#See helpers provided in plugin in in POD and source code
 	$self->plugin('Mojolicious::Cafe::Plugin::DateTime');
