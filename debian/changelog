@@ -1,3 +1,10 @@
+libcafe-application-perl (0.8.37-1) stable; urgency=low
+
+   * remove obsolete authorization plugin
+   * add autoloaders support
+
+ -- Norbert Volf <norbert@volf.eu>  Fri,  26 Mar 2012 08:31 +0200
+
 libcafe-application-perl (0.8.36-1) stable; urgency=low
 
    * add debian dependency to memcached
