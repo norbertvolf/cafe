@@ -62,7 +62,7 @@ sub load {
 	my ($self, $force) = @_;
 	if ( ! $self->loaded || $force ) {
 		#TODO:Implementovat test jestli jsou data v Cache
-		$self->c->app->log->debug("Query:\n" . $self->query_compiled) if ( $self->root->app->mode('development') );
+		$self->c->app->log->debug("Query:\n" . $self->query_compiled);
 		my $sth = $self->dbh->prepare($self->query_compiled);
 		$sth->execute($self->query_params());
 		$self->list($sth->fetchall_arrayref({}));
@@ -89,43 +89,48 @@ sub list {
 	return(wantarray ? @{$self->{_list}} : $self->{_list});
 }
 #}}}
-#{{{ private convert_timestamps
-=head3 C<convert_timestamps>
-
-Convert timestamp/date postgresql columns in list to Datetime class.
-
-=cut
-sub convert_timestamps {
-	my $self = shift;
-
-	my @cdt = map { $_->{key} } grep { $_->{type} == $self->c->DB_DATE } $self->columns;
-
-	foreach my $r ( $self->list ) {
-		map {
-			if ( defined($r->{$_}) ) {
-				if ( $r->{$_} =~ /(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})([+-]\d{2})/ ) {
-					$r->{$_} = DateTime->new( 
-						year   => $1,
-						month  => $2,
-						day    => $3,
-						hour   => $4,
-						minute => $5,
-						second => $6,
-						locale => $self->c->user->locale,
-					);
-				} elsif ( $r->{$_} =~ /(\d{4})-(\d{2})-(\d{2})/ ) {
-					$r->{$_} = DateTime->new( 
-						year   => $1,
-						month  => $2,
-						day    => $3,
-						locale => $self->c->user->locale,
-					);
-				}
-			}
-		} @cdt;
-	}
+#{{{ hash
+#Returns formated values by hash based on definition of columns
+sub hash {
+	my ($self, $unlocalized) = @_;
+	my $data = $self->SUPER::hash;
+	my @list = map {
+		if ( ref($_) eq "HASH") {
+		} elsif ( ref($_) eq "ARRAY") {
+		} elsif ( ! ref($_) eq "" ) {
+			$_->hash;
+		}
+		$_;
+	} $self->list;
+	$data->{list} =  \@list;
+	return($data);
 }
 #}}}
+#{{{ dump
+=head3 dump
+
+Return string with dumped data
+
+=cut
+sub dump {
+	my $self = shift;
+	my $dump = "\n" . $self->SUPER::dump . "\n\nlist = [\n";
+	foreach my $r (  $self->list ) { 
+		my $part = '';
+		if ( ref($r) && ( ref($r) eq 'HASH' || ref($r) eq 'ARRAY' || ref($r) eq 'SCALAR') ) {
+			$part = $self->c->app->dumper($r) . "\n";
+		} elsif( ref($r) ) {
+			$part = $r->dump . "\n";
+		}
+		$part =~ s/^/  /mg;
+		$dump .= $part;
+	}
+	$dump .= "]\n\n";
+	return($dump);
+}
+#}}}
+
+
 #{{{ private query_compiled
 =head3 C<query_compiled>
 
@@ -167,31 +172,20 @@ sub query_params {
 		eval("\$param = \$self->$1;");
 		push(@params, $param);
 	}
-	$self->c->app->log->debug("Query parameters:\n" . $self->c->app->dumper(\@params)) if ( $self->root->app->mode('development') );
+	$self->c->app->log->debug("Query parameters:\n" . $self->c->app->dumper(\@params)) if ( scalar(@params) ); 
 	return(@params);
 }
 #}}}
-#{{{ dump
-=head3 dump
-
-Return string with dumped data
-
-=cut
-sub dump {
+#{{{ private convert_timestamps
+#Convert timestamp/date postgresql columns in list to Datetime class.
+sub convert_timestamps {
 	my $self = shift;
-	my $dump = "\n" . $self->SUPER::dump . "\n\nlist = [\n";
-	foreach my $r (  $self->list ) { 
-		my $part = '';
-		if ( ref($r) && ( ref($r) eq 'HASH' || ref($r) eq 'ARRAY' || ref($r) eq 'SCALAR') ) {
-			$part = $self->c->app->dumper($r) . "\n";
-		} elsif( ref($r) ) {
-			$part = $r->dump . "\n";
-		}
-		$part =~ s/^/  /mg;
-		$dump .= $part;
+
+	my @cdt = map { $_->{key} } grep { $_->{type} == $self->c->DB_DATE } $self->columns;
+
+	foreach my $r ( $self->list ) {
+		map { $r->{$_} = $self->func_parse_pg_date($r->{$_}); } @cdt;
 	}
-	$dump .= "]\n\n";
-	return($dump);
 }
 #}}}
 

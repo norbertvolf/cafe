@@ -121,20 +121,6 @@ my $output = "{\n";
 $output .= "\t\t\ttitle => '" . ucfirst($title) . "',\n";
 $output .= "\t\t\tentity => '$definition->{entity}',\n";
 
-#Generate forms
-$output .= "\t\t\tform => {\n";
-$output .= "\t\t\t\turl => '?type=json',\n";
-$output .= "\t\t\t\tmethod_get => '/$schema/$table/get/',\n";
-$output .= "\t\t\t\tmethod_set => '/$schema/$table/set/',\n";
-$output .= "\t\t\t\tmethod_del => '/$schema/$table/del/',\n";
-$output .= "\t\t\t\tmethod_del_caption => '$definition->{form}->{method_del_caption}',\n";
-$output .= "\t\t\t\tmethod_del_url => '?method=/$schema/$table/search/',\n";
-$output .= "\t\t\t\tcaption_edit => 'Edit',\n";
-$output .= "\t\t\t\tcaption_save => 'Save',\n";
-$output .= "\t\t\t\tcaption_cancel => 'Cancel',\n";
-$output .= "\t\t\t\tcaption_delete => 'Delete',\n";
-$output .= "\t\t\t},\n";
-
 #Generate columns of persistent table
 $output .= "\t\t\tcolumns => {\n";
 foreach my $level1 (@{$definition->{columns}}) {
@@ -154,20 +140,6 @@ foreach my $level1 (@{$definition->{columns}}) {
 		$output .= "\t\t\t\t\tsequence => '$level1->{sequence}',\n";
 	}
 	$output .= "\n";
-	if ( exists ($level1->{label}) ) {
-		$output .= "\t\t\t\t\tlabel => '$level1->{label}',\n";
-	}
-	if ( exists ($level1->{input}) ) {
-		$output .= "\t\t\t\t\tinput => '$level1->{input}',\n";
-	}
-	if ( exists ($level1->{position}) ) {
-		$output .= "\t\t\t\t\tposition => $level1->{position},\n";
-	}
-	if ( exists ($level1->{tags}) && exists ($level1->{tags}->{input}) && exists($level1->{tags}->{input}->{style}) ) {
-		$output .= "\t\t\t\t\ttags => {\n";
-		$output .= "\t\t\t\t\t\tinput => { style => '$level1->{tags}->{input}->{style}' },\n";
-		$output .= "\t\t\t\t\t},\n";
-	}
 
 	$output .= "\t\t\t\t},\n";
 
@@ -179,8 +151,9 @@ $output .= "\t\t\tautoloaders => {\n";
 foreach my $level1 (sort(keys(%{$definition->{autoloaders}}))) {
 	$output .= "#\t\t\t\t$level1 => {\n";
 	$output .= "#\t\t\t\t\tclass => '$definition->{autoloaders}->{$level1}->{class}',\n";
-	$output .= "#\t\t\t\t\tid => '$definition->{autoloaders}->{$level1}->{id}',\n";
-	$output .= "#\t\t\t\t\tshadow => '$definition->{autoloaders}->{$level1}->{shadow}',\n";
+	$output .= "#\t\t\t\t\tparams => {,\n";
+	$output .= "#\t\t\t\t\t\tiduser => sub { my \$self = shift; return \$self->iduser; },',\n";
+	$output .= "#\t\t\t\t\t},\n";
 	$output .= "#\t\t\t\t},\n";
 }
 $output .= "\t\t\t},\n";
@@ -189,9 +162,9 @@ $output .= "\t\t}";
 $output ="package " . ucfirst($schema) . "::" . join("::",  map { ucfirst($_) } split('_', $table)) . ";
 
 use utf8;
-use warnings;
-use strict;
-use base qw(Mojolicious::Cafe::Class);
+
+use Mojo::Base 'Mojolicious::Cafe::Class';
+use Scalar::Util;
 
 sub new {
 	my (\$class, \$c, \$$primarykey) = \@_;

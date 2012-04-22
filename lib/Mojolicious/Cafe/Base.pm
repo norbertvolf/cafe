@@ -1,6 +1,9 @@
 package Mojolicious::Cafe::Base;
 
 use Mojo::Base -base;
+use Data::Dumper;
+use Validation::Class::Simple;
+use DateTime;
 
 has loaded => 0;
 has okay => 0;
@@ -9,11 +12,7 @@ has 'definition';
 has 'c';
 
 #{{{ new
-=head3 new
-
-Create new instance of Cafe::Mojo::Class
-
-=cut 
+#Create new instance of Cafe::Mojo::Class
 sub new {
 	my $class = shift;
 	my $c = shift;
@@ -34,11 +33,7 @@ sub new {
 }
 #}}}
 #{{{check
-=head3 C<check>
-
-Check definiton, passed as paramaters
-
-=cut 
+#Check definiton, passed as paramaters
 sub check {
 	my $self = shift;
 	my $def = shift;
@@ -48,55 +43,157 @@ sub check {
 }
 #}}}
 #{{{columns
-=head3 columns
-
-Return sorted (by pos) columns as array
-
-=cut 
+#Return sorted (by pos) columns as array
 sub columns {
 	my $self = shift;
 	my $def = scalar(@_) ? shift : $self->definition;
-	my @columns = sort { ( defined($a->{position}) ? $a->{position} : 0 )  <=> ( defined($b->{position}) ? $b->{position} : 0 ) } map { $def->{columns}->{$_}->{key} = $_;$def->{columns}->{$_} } keys(%{$def->{columns}});
+	my @columns = sort { ( $a->{position} || 0 )  <=> ( $b->{position} || 0 ) } map { $def->{columns}->{$_}->{key} = $_;$def->{columns}->{$_} } keys(%{$def->{columns}});
 	return(wantarray ? @columns : \@columns);
 }
 #}}}
 #{{{dbh
-=head3 C<dbh>
-
-Return dbh from definition
-
-=cut 
+#Return dbh from definition
 sub dbh { return(shift->definition->{dbh} ); }
 #}}}
 #{{{ dump
-=head3 dump
-
-Return string with dumped data
-
-=cut
+#Return string with dumped data
 sub dump {
 	my $self = shift;
-	return(ref($self) . "::dump = {\n  " . join( "\n  ",  map { eval { "$_ => " . ($self->$_ // '') } } map { $_->{key} } $self->columns) . "\n};" );
+	return(ref($self) . "::dump = \n{\n  " . join( "\n  ",  map { eval { "$_ => " . ($self->$_ // '') } } map { $_->{key} } $self->columns) . "\n};" );
+}
+#}}}
+#{{{ debug
+#Print debug info to log
+sub debug {
+	my $self = shift;
+	if ( scalar(@_) ) {
+		$self->c->app->log->debug(Dumper(@_));
+	} else {
+		$self->c->app->log->debug($self->dump());
+	}
 }
 #}}}
 #{{{ root
-=head3 root
-
-Return root class for back compatibility
-root class is  controller now (property *c*)
-
-=cut
+#Return root class for back compatibility root class is  controller now (property *c*)
 sub root {
 	return(shift->c);
 }
 #}}}
+#{{{ hash
+#Returns formated values by hash based on definition of columns
+sub hash {
+	my ($self, $unlocalized) = @_;
+	my $data = {};
+
+	foreach my $key (sort(keys(%{$self->definition->{columns}}))) {
+		if ( $self->$key && $self->definition->{columns}->{$key}->{type} == $self->c->DB_DATE ) {
+			#Format datetime attributes
+			$data->{$key} = defined($self->$key) ? $self->$key->strftime("%x") : undef;
+		} elsif ( $self->$key && $self->definition->{columns}->{$key}->{type} == $self->c->DB_NUMERIC ) {
+			#Format numeric attributes
+			if ( exists($self->definition->{columns}->{$key}->{format}) ) {
+				$data->{$key} = sprintf("$self->definition->{columns}->{$key}->{format}", $self->$key);
+			} else {
+				$data->{$key} = sprintf("%.2f", $self->$key);
+			}
+		} elsif ( defined($self->$key) )  {
+			$data->{$key} = $self->$key;
+		} else {
+			$data->{$key} = undef;
+		}
+	}
+	return($data);
+}
+#}}}
+#{{{ errors
+#Returns hash of errors
+sub errors {
+	my ($self, $unlocalized) = @_;
+	my $errors = {};
+
+	foreach my $key (sort(keys(%{$self->definition->{columns}}))) {
+		if ( exists($self->definition->{columns}->{$key}->{error}) ) {
+			$errors->{$key} = {};
+			$errors->{$key}->{label} =  $self->definition->{columns}->{$key}->{label} // $key;
+			$errors->{$key}->{error} = $self->definition->{columns}->{$key}->{error};
+		}
+	}
+	return($errors);
+}
+#}}}
+#{{{ validate
+#Return validate based on actual definition
+sub validate {
+	my $self = shift;
+	my $params = shift;
+	my $columns = $self->definition->{columns};
+	my %params;
+	my $errors = 0;
+
+	#Pass parameters to validator
+	$self->validator->set_params_hash($params);
+	foreach my $key ( keys(%{$params}) ) {
+		#Validate all columns with directive rule
+		if ( exists($columns->{$key}) && ref($columns->{$key}) eq 'HASH' &&  $self->definition->{columns}->{$key}->{rule} ) {
+			if ( $self->validator->validate($key) ) {
+				#Copy value to instance of class by setter
+				if ( $columns->{$key}->{type} == $self->c->DB_DATE ) {
+					$self->$key( $self->func_parse_date($params->{$key}));
+				} elsif ( $columns->{$key}->{type} == $self->c->DB_INT ) {
+					$self->$key($params->{$key} + 0);
+				} elsif ( $columns->{$key}->{type} == $self->c->DB_NUMERIC ) {
+					$self->$key($params->{$key} + 0);
+				} else {
+					$self->$key($params->{$key});
+				}
+			} else {
+				#Set error value
+				$columns->{$key}->{error} = $self->validator->error;
+				$errors++;
+			}
+		}
+	}
+
+	return(! $errors);
+}
+#}}}
+#{{{ validator
+#Create, memoize and return validator for actual class
+sub validator {
+	my $self = shift;
+	#Is validator memoized
+	if ( ! $self->c->app->validator( ref($self) ) ) {
+		#Create validator and memoize it to App
+		my %fields;
+		my %columns = %{$self->definition->{columns}};
+		foreach my $key ( keys(%columns) ) {
+			
+
+			if ( $columns{$key}->{rule} ) {
+				#Create validator from attributes where rule directive is true
+				$fields{$key} = {};
+				$columns{$key}->{filters} = 'trim' if ( ! $columns{$key}->{filters} );
+				if ( $columns{$key}->{type} == $self->c->DB_DATE ) {
+					$columns{$key}->{validation} = func_validate_date() if ( ! $columns{$key}->{validation} );
+				} elsif ( $columns{$key}->{type} == $self->c->DB_INT ) {
+					$columns{$key}->{pattern} = qr/^\d+$/ if ( ! $columns{$key}->{pattern} );
+				} elsif ( $columns{$key}->{type} == $self->c->DB_NUMERIC ) {
+					$columns{$key}->{pattern} = qr/^\d+[.,]{0,1}\d*$/ if ( ! $columns{$key}->{pattern} );
+				} 
+				#Copy permitted directives to Validatioin::Class definition
+				foreach my $directive ('pattern', 'required', 'label', 'error', 'errors', 'validation', 'max_length', 'filters') {
+					$fields{$key}->{$directive} = $columns{$key}->{$directive} if ( defined($columns{$key}->{$directive}) );
+				}
+			}
+		}
+		#Create and memoize validator
+		$self->c->app->validator( ref($self), Validation::Class::Simple->new( fields => \%fields ) );
+	}
+	return($self->c->app->validator( ref($self) ));
+}
+#}}}
 #{{{AUTOLOAD
-=head3 AUTOLOAD
-
-Autoloader to handle columns and autoloaders from 
-definition
-
-=cut 
+#Default method to handle columns and autoloaders from definition
 sub AUTOLOAD {
 	my $self = shift;
 
@@ -158,12 +255,8 @@ sub AUTOLOAD {
 #}}}
 
 #Private methods
-#{{{ defaults
-=head3 C<defaults>
-
-Set default columns values
-
-=cut 
+#{{{private defaults
+#Set default columns values
 sub defaults {
 	my $self = shift;
 
@@ -173,5 +266,212 @@ sub defaults {
 	}
 }
 #}}}
+#{{{ private func_validate_date
+#Return function to validate date
+sub func_validate_date {
+	my $retval = sub {
+		my ($self, $this_field, $all_params) = @_;
+		my $year;
+		my $month;
+		my $day;
+		if ( $this_field->{value} =~ m!^((?:19|20)\d\d)[- /.]([1-9]|0[1-9]|1[012])[- /.]([1-9]|0[1-9]|[12][0-9]|3[01])! ) {
+			$year = $1;
+			$month = $2;
+			$day = $3;
+		} elsif ( $this_field->{value} =~ m!^([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]{0,1}([1-9]|0[1-9]|1[012])[- /.]{0,1}((?:19|20)\d\d)! ) {
+			$year = $3;
+			$month = $2;
+			$day = $1;
+		}
+		if ( $year ) {
+			# At this point, $1 holds the year, $2 the month and $3 the day of the date entered
+			if ($day == 31 and ($month == 4 or $month == 6 or $month == 9 or $month == 11)) {
+				return 0; # 31st of a month with 30 days
+			} elsif ($day >= 30 and $month == 2) {
+				return 0; # February 30th or 31st
+			} elsif ($month == 2 and $day == 29 and not ($year % 4 == 0 and ($year % 100 != 0 or $year % 400 == 0))) {
+				return 0; # February 29th outside a leap year
+			} else {
+				return 1; # Valid date
+			}
+		} else {
+			return 0; # Not a date
+		}
+	};
+	return ($retval);
+}
+#}}}
+#{{{func_parse_date
+#Return datetime
+sub func_parse_date {
+	my $self = shift;
+	my $value = shift;
+	my $date;
+	if ( $value =~ m!^((?:19|20)\d\d)[- /.]([1-9]|0[1-9]|1[012])[- /.]([1-9]|0[1-9]|[12][0-9]|3[01])! ) {
+		$date = DateTime->new( 
+			year   => $1,
+			month  => $2,
+			day    => $3,
+			locale => $self->c->user->locale,
+		);
+	} elsif ( $value =~ m!^([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]([1-9]|0[1-9]|1[012])[- /.]((?:19|20)\d\d)! ) {
+		$date = DateTime->new(
+			year   => $3,
+			month  => $2,
+			day    => $1,
+			locale => $self->c->user->locale,
+		);
+	} elsif ( ! defined($value) || $value eq '' ) {
+		$date = undef;
+	} else {
+		Mojo::Exception->throw("Bad date format");
+	}
+	return($date);
+}
+#}}}
+#{{{protected func_parse_pg_date
+#Return datetime
+sub func_parse_pg_date {
+	my $self = shift;
+	my $value = shift;
+	my $date;
+	if ( $value =~ /(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})([+-]\d{2})/ ) {
+		$date = DateTime->new( 
+			year   => $1,
+			month  => $2,
+			day    => $3,
+			hour   => $4,
+			minute => $5,
+			second => $6,
+			locale => $self->c->user->locale,
+		);
+	} elsif ( $value =~ /(\d{4})-(\d{2})-(\d{2})/ ) {
+		$date = DateTime->new( 
+			year   => $1,
+			month  => $2,
+			day    => $3,
+			locale => $self->c->user->locale,
+		);
+	} elsif ( ! defined($value) || $value eq '' ) {
+		$date = undef;
+	} else {
+		Mojo::Exception->throw("Bad postgresql date format");
+	}
+	return($date);
+}
+#}}}
 
 1;
+
+__END__
+
+=head1 NAME
+
+Mojolicious::Cafe::Base - base class to build Postgresql Web applications
+
+=head1 DIRECTIVES
+
+Directives originally from Mojolicious::Cafe
+
+=head2 type
+
+Type of attribute si constant defined as method in Mojolicious::Cafe::Controller
+
+=over
+
+=item DB_INT - integer
+
+=item DB_NUMERIC - numeric fixed-length value
+
+=item DB_VARCHAR - character values
+
+=item DB_DATE - date value as instance of DateTime
+
+=back
+
+C<type =E<gt> $c->DB_INT>
+
+=head2 primary_key
+
+Define primary_key. The primary_key must be defined to save record.
+
+C<primary_key =E<gt> 1>
+
+=head2 sequence
+
+Sequence is name of sequence to fetch new identifier from databbase 
+sequence.
+
+C<sequence =E<gt> 'cms.idbanner' >
+
+=head2 rule
+
+If rule is defined and true attribute is validated and passwd to instance.
+
+C<rule =E<gt> 1>
+
+=head2 default
+
+Default value passed to attribute.
+
+C<default =E<gt> 'Default Value'>
+
+=head2 position
+
+Method columns returns array sorted by the position parameters.
+
+C<position =E<gt> 1>
+
+=head2 required
+
+Define if undef is permitted for attribute.  Label directive is 
+inherited from Validation::Class. See the Validation::Class
+documentation.
+
+C<required =E<gt> 1>
+
+C<required =E<gt> 0>
+
+Directives below are inherited from Validation::Class. Directives below are 
+passed to Validation::Class only.
+
+=head2 label
+
+B<label> directive is inherited from Validation::Class. See the Validation::Class
+documentation.
+
+C<label =E<gt> 'User Password'>
+
+=head2 error/errors
+
+B<error> directive is inherited from Validation::Class. See the Validation::Class
+documentation.
+
+C<error =E<gt> 'Password invalid.'>
+
+=head2 validation
+
+B<validation> directive is inherited from Validation::Class. See the Validation::Class
+documentation.
+
+C<validation =E<gt> sub {
+	my ($self, $this_field, $all_params) = @_;
+	return $this_field->{value} eq 'pass' ? 1 : 0;
+}>
+
+
+=head2 max_length
+
+B<max_length> directive is inherited from Validation::Class. See the Validation::Class
+documentation.
+
+C<max_length =E<gt> 10>
+
+=head2 pattern
+
+B<pattern> directive is inherited from Validation::Class. See the Validation::Class
+documentation.
+
+C<max_length =E<gt> 10>
+
+=cut

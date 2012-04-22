@@ -38,12 +38,8 @@ sub startup {
 }
 #}}}
 #{{{ setup_config
-=head2 setup_config
-
-TODO: Cele prepsat, tak aby nacetl hash sam a pak ho pastnul
-napral do Mojoicious::Plugin::Configu
-
-=cut
+#TODO: Cele prepsat, tak aby nacetl hash sam a pak ho pastnul
+#napral do Mojoicious::Plugin::Configu
 sub setup_config {
 	my $self = shift;
 
@@ -81,6 +77,27 @@ sub setup_config {
 	} else {
 		Mojo::Exception->throw("Configuration file ". CONFIG_FILE . " not found");
 	}
+}
+#}}}
+#{{{ validator
+#Return set/get validators by class name
+sub validator {
+	my $self = shift;
+	my $class = shift;
+
+	#class parameter is required
+	Mojo::Exception->throw("\$class parameter missing") if ( ! $class ); 
+
+	#Create validator hash
+	$self->{_validators} = {} if ( ! ref($self->{_validators}) eq 'HASH' );
+
+	#Initialize validator
+	$self->{_validators}->{$class} = undef if ( ! exists($self->{_validators}->{$class}) );
+
+	#Set validator
+	$self->{_validators}->{$class} = shift if ( ! defined($self->{_validators}->{$class}) && scalar(@_));
+
+	return($self->{_validators}->{$class});
 }
 #}}}
 

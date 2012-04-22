@@ -135,11 +135,7 @@ sub DB_VARCHAR { return( 0 ); }
 sub DB_INT { return( 1 ); }
 sub DB_DATE { return( 2 ); }
 sub DB_NUMERIC { return( 3 ); }
-sub DB_FMTCHAR { return( 4 ); }
 sub DB_INT8 { return( 6 ); }
-sub DB_NULL { return( 7 ); }
-sub DB_NOTNULL { return( 8 ); }
-sub DB_DATETIMETZ { return( 9 ); }
 sub CAFE_TTL { return( 300 ); }
 sub OK { return( 1 ); }
 sub NOK { return( 0 ); }
