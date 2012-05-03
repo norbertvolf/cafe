@@ -1,3 +1,16 @@
+libcafe-application-perl (0.8.38-1) stable; urgency=low
+
+   * add changed attribute, add json method, rich directive documentation
+   * add nextval and exists function, save multi primary key records
+   * add caller function, refresh workaround to fix database connection after rollback
+   * add push, search methods and convert types automatically during load
+   * add timezone to now method
+   * save sessionid to cookie
+   * builder rewritten to use Mojolicious::Cafe classes
+   * integrate Validation::Class
+
+ -- Norbert Volf <norbert@volf.eu>  Mon,  02 May 2012 16:28:00 +0200
+
 libcafe-application-perl (0.8.37-1) stable; urgency=low
 
    * remove obsolete authorization plugin
