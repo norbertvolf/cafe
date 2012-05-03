@@ -8,6 +8,7 @@ use DateTime;
 has loaded => 0;
 has okay => 0;
 has message => 0;
+has changed => 0; #If somenody change any attribute via getter/setter change to 1
 has 'definition';
 has 'c';
 
@@ -18,6 +19,7 @@ sub new {
 	my $c = shift;
 	my $def = shift;
 	my $self = $class->SUPER::new();
+
 
 	$self->c($c);
 	#Add dbh from controller if not exists
@@ -82,7 +84,7 @@ sub root {
 #{{{ hash
 #Returns formated values by hash based on definition of columns
 sub hash {
-	my ($self, $unlocalized) = @_;
+	my $self = shift;
 	my $data = {};
 
 	foreach my $key (sort(keys(%{$self->definition->{columns}}))) {
@@ -105,17 +107,27 @@ sub hash {
 	return($data);
 }
 #}}}
+#{{{ json
+#Returns hash converted to json
+sub json {
+	my $self = shift;
+	return($self->c->render( json => $self->hash, partial => 1 )->decode);
+}
+#}}}
 #{{{ errors
 #Returns hash of errors
 sub errors {
-	my ($self, $unlocalized) = @_;
-	my $errors = {};
+	my $self = shift;
+	my $errors = [];
+
 
 	foreach my $key (sort(keys(%{$self->definition->{columns}}))) {
-		if ( exists($self->definition->{columns}->{$key}->{error}) ) {
-			$errors->{$key} = {};
-			$errors->{$key}->{label} =  $self->definition->{columns}->{$key}->{label} // $key;
-			$errors->{$key}->{error} = $self->definition->{columns}->{$key}->{error};
+		if ( exists($self->definition->{columns}->{$key}->{invalid}) ) {
+			push(@{$errors}, {
+				label =>  $self->definition->{columns}->{$key}->{label} // $key,
+				error => $self->definition->{columns}->{$key}->{error} // ( $self->c->__('Invalid') . $self->definition->{columns}->{$key}->{label} . $self->c->__('field') ),
+				key => $key,
+			});
 		}
 	}
 	return($errors);
@@ -130,6 +142,8 @@ sub validate {
 	my %params;
 	my $errors = 0;
 
+	$self->c->app->log->debug("Validate input params for class " . ref($self) . "\n". Dumper($params));
+
 	#Pass parameters to validator
 	$self->validator->set_params_hash($params);
 	foreach my $key ( keys(%{$params}) ) {
@@ -139,16 +153,16 @@ sub validate {
 				#Copy value to instance of class by setter
 				if ( $columns->{$key}->{type} == $self->c->DB_DATE ) {
 					$self->$key( $self->func_parse_date($params->{$key}));
-				} elsif ( $columns->{$key}->{type} == $self->c->DB_INT ) {
+				} elsif ( $columns->{$key}->{type} == $self->c->DB_INT && defined($params->{$key}) ) {
 					$self->$key($params->{$key} + 0);
-				} elsif ( $columns->{$key}->{type} == $self->c->DB_NUMERIC ) {
+				} elsif ( $columns->{$key}->{type} == $self->c->DB_NUMERIC && defined($params->{$key}) ) {
 					$self->$key($params->{$key} + 0);
 				} else {
 					$self->$key($params->{$key});
 				}
 			} else {
 				#Set error value
-				$columns->{$key}->{error} = $self->validator->error;
+				$columns->{$key}->{invalid} = 1;
 				$errors++;
 			}
 		}
@@ -212,7 +226,16 @@ sub AUTOLOAD {
 		my $method = $1;
 		if ( exists($self->definition->{columns}->{$method}) ) {
 			#Set property if param is defined
-			$self->{"_$method"} = $param if ( $numofprm );
+			if ( $numofprm && 
+				( 
+					( defined($self->{"_$method"}) && ! defined($param) ) || 
+					( ! defined($self->{"_$method"}) && defined($param) ) ||
+					( defined($self->{"_$method"}) && defined($param) && ! ( $self->{"_$method"} eq $param ) ) 
+				)
+			) {
+				$self->{"_$method"} = $param;
+				$self->changed(1);
+			}
 			#If is invocated method with name defined as column return value of this column
 			return($self->{"_$method"});
 		} elsif ( exists($self->definition->{autoloaders}->{$method} ) ) {
@@ -230,7 +253,7 @@ sub AUTOLOAD {
 					foreach my $key ( keys(%{$autoloader->{params}}) ) {
 						#Clean up destination property name
 						$key =~ s/^\s*(\w+)\s*$/$1/;
-
+						
 						#Set param value as value or as value returned from anonymous 
 						#function passed as param (anonymous function can return
 						#anything what you want
@@ -238,7 +261,8 @@ sub AUTOLOAD {
 							eval("\$obj->$key(&{\$autoloader->{params}->{\$key}}(\$self));");
 							Mojo::Exception->throw("Cafe::Class::AUTLOADER: $@") if ($@);
 						} else {
-							eval("\$obj->$key(\$autoloader->{params}->{\$key});");
+							my $method = $autoloader->{params}->{$key};
+							eval{ $obj->$key($self->$method); };
 							Mojo::Exception->throw("Cafe::Class::AUTLOADER: $@") if ($@);
 						}
 					}
@@ -248,14 +272,14 @@ sub AUTOLOAD {
 			}
 			return($self->{"_$autoloader"});
 		} else {
-			Mojo::Exception->throw("Method $method is not defined");
+			Mojo::Exception->throw("Method $method is not defined.\n" . $self->c->caller );
 		}
 	}
 }
 #}}}
 
-#Private methods
-#{{{private defaults
+#Protected methods
+#{{{protected defaults
 #Set default columns values
 sub defaults {
 	my $self = shift;
@@ -266,7 +290,7 @@ sub defaults {
 	}
 }
 #}}}
-#{{{ private func_validate_date
+#{{{protected func_validate_date
 #Return function to validate date
 sub func_validate_date {
 	my $retval = sub {
@@ -301,7 +325,7 @@ sub func_validate_date {
 	return ($retval);
 }
 #}}}
-#{{{func_parse_date
+#{{{protected func_parse_date
 #Return datetime
 sub func_parse_date {
 	my $self = shift;
@@ -344,6 +368,7 @@ sub func_parse_pg_date {
 			minute => $5,
 			second => $6,
 			locale => $self->c->user->locale,
+			time_zone => $7 . "00",
 		);
 	} elsif ( $value =~ /(\d{4})-(\d{2})-(\d{2})/ ) {
 		$date = DateTime->new( 
@@ -369,7 +394,46 @@ __END__
 
 Mojolicious::Cafe::Base - base class to build Postgresql Web applications
 
-=head1 DIRECTIVES
+=head1 AUTOLOADERS DIRECTIVES
+
+Autoloaders means automatically created method which return instances of 
+classes defined via autoloaders direcvtive. 
+
+=head2 autoloaders
+
+Contanin hash of hashes with autoloader definition. Key of child hash is
+the name of the autoloader (method).
+
+	autoloaders => {
+		territories => {
+			class => "Chain::Territory::Active",
+		},
+		langs => {
+			class => "Cms::Banner::Lang::List",
+			params => {
+				idbanner => 'idbanner',
+			},
+		},
+		test => {
+			class => 'Test::Item',
+			params => {,
+				iduser => sub { my $self = shift; return $self->iduser; },',
+			},
+		},
+
+	},
+
+=head2 class
+
+Name of class for instancing.
+
+=head2 params
+
+Hash of parameters. Key is attribute from instance of class defined
+in C<class> parameter. Values is name of attribute from actual instance or
+value is anonymous function which return required value.
+
+=head1 COLUMN DIRECTIVES
 
 Directives originally from Mojolicious::Cafe
 
@@ -473,5 +537,14 @@ B<pattern> directive is inherited from Validation::Class. See the Validation::Cl
 documentation.
 
 C<max_length =E<gt> 10>
+
+=head1 METHODS
+
+=head2 json
+
+B<json> method returns hash from the instance converted to json string. Usable to 
+generate json as part of template.
+
+C<my $json = $banner->json>
 
 =cut
