@@ -60,9 +60,9 @@ while (<STDIN>) { # like "while(defined($_ = <STDIN>)) {"
 		}
 
 		if ( $null =~ /not null/ )  {
-			$def->{null} = '$c->DB_NOTNULL';
+			$def->{required} = 1;
 		} else {
-			$def->{null} = '$c->DB_NULL';
+			$def->{required} = 0;
 		}
 
 
@@ -95,7 +95,7 @@ while (<STDIN>) { # like "while(defined($_ = <STDIN>)) {"
 		if ( $counter == 1 ) {
 			$def->{primary_key} = "1";
 			$def->{sequence} = "$schema.$column";
-			$def->{null} = "\$c->DB_NULL";
+			$def->{required} = 0;
 			$primarykey = $column;
 		}
 
@@ -126,18 +126,13 @@ $output .= "\t\t\tcolumns => {\n";
 foreach my $level1 (@{$definition->{columns}}) {
 	$output .= "\t\t\t\t$level1->{name} => {\n";
 	$output .= "\t\t\t\t\ttype => $level1->{type},\n";
-	$output .= "\t\t\t\t\tnull => $level1->{null},\n";
 	if ( exists ($level1->{rule}) ) {
+		$output .= "\t\t\t\t\trequired => $level1->{required},\n";
 		$output .= "\t\t\t\t\trule => $level1->{rule},\n";
-	}
-	if ( exists ($level1->{opts}) ) {
-		$output .= "\t\t\t\t\topts => $level1->{opts},\n";
 	}
 	if ( exists ($level1->{primary_key}) ) {
 		$output .= "\t\t\t\t\tprimary_key => $level1->{primary_key},\n";
-	}
-	if ( exists ($level1->{sequence}) ) {
-		$output .= "\t\t\t\t\tsequence => '$level1->{sequence}',\n";
+		$output .= "\t\t\t\t\tsequence => '$level1->{sequence}',\n" if ( exists ($level1->{sequence}) );
 	}
 	$output .= "\n";
 
