@@ -3,22 +3,20 @@ package Mojolicious::Cafe::Listing;
 use Mojo::Base 'Mojolicious::Cafe::Base';
 use DBD::Pg qw(:pg_types);
 use Scalar::Util qw(looks_like_number);
+use Encode;
 
 
 has 'limit';
 has 'offset';
 
 #{{{ new
-=head3 new
-
-Create new instance of Mojolicious::Cafe::Listing
-
-=cut 
+#Create new instance of Mojolicious::Cafe::Listing
 sub new {
 	my $class = shift;
 	my $c = shift;
 	my $definition = shift;
 	my $self = $class->SUPER::new($c, $definition);
+	$self->default_from_session();
 
 	#Initialize list as empty refarray
 	$self->list([]);
@@ -27,11 +25,7 @@ sub new {
 }
 #}}}
 #{{{check
-=head3 C<check>
-
-Check definiton, passed as paramaters
-
-=cut 
+#Check definiton, passed as paramaters
 sub check {
 	my $self = shift;
 	my $def = shift;
@@ -43,43 +37,28 @@ sub check {
 }
 #}}}
 #{{{ load
-=head3 C<load>
-
-Load persistent data from databases by query defined
-in class.
-
-B<parameters>
-
-=over 
-
-=item $force - if $force = 1 ignore data loaded by instance, if $force
-               = 2 delete memcached and load data from database
-
-=back 
-
-=cut
+#Load persistent data from databases by query defined
+#in class.
 sub load {
 	my ($self, $force) = @_;
 	if ( ! $self->loaded || $force ) {
-		#TODO:Implementovat test jestli jsou data v Cache
 		$self->c->app->log->debug("Query:\n" . $self->query_compiled);
 		my $sth = $self->dbh->prepare($self->query_compiled);
 		$sth->execute($self->query_params());
 		$self->list($sth->fetchall_arrayref({}));
-		#TODO:Implementovat ulozeni do memcache
 
-		#Convert DB_DATE columns to DateTime instances
-		$self->convert_timestamps;
+		#Normalize rows
+		foreach my $r ( $self->list ) {
+			#Convert timestamp from databaze to Datetime
+			map { $r->{$_} = $self->func_parse_pg_date($r->{$_}); } map { $_->{key} } grep { $_->{type} == $self->c->DB_DATE } $self->columns;
+			map { $r->{$_} = decode("utf-8", $r->{$_}); } map { $_->{key} } grep { $_->{type} == $self->c->DB_VARCHAR } $self->columns;
+		}
 	}
 	return($self->list);
 }
 #}}}
 #{{{ list
-=head3 C<list>
-
-Getter/setter for list of records
-
-=cut
+#Getter/setter for list of records
 sub list {
 	my $self = shift;
 	if ( scalar(@_) ) {
@@ -89,29 +68,40 @@ sub list {
 	return(wantarray ? @{$self->{_list}} : $self->{_list});
 }
 #}}}
+#{{{ push
+#add new value to list 
+sub push {
+	my $self = shift;
+	Mojo::Exception->throw("You must pass some value to push them to the list.") if ( ! scalar(@_) ); 
+	push( @{$self->{_list}}, shift);
+}
+#}}}
 #{{{ hash
 #Returns formated values by hash based on definition of columns
 sub hash {
 	my ($self, $unlocalized) = @_;
 	my $data = $self->SUPER::hash;
 	my @list = map {
+		my $val;
 		if ( ref($_) eq "HASH") {
+			$val = $_;
+			#Convert statestamp to locale date format
+			foreach my $key ( map { $_->{key} } grep { $_->{type} == $self->c->DB_DATE } $self->columns ) {
+				$val->{$key} = defined($val->{$key}) ? $val->{$key}->strftime("%x") : undef ;
+			}
 		} elsif ( ref($_) eq "ARRAY") {
-		} elsif ( ! ref($_) eq "" ) {
-			$_->hash;
+			$val = $_;
+		} elsif ( ! ( ref($_) eq "" ) ) {
+			$val = $_->hash;
 		}
-		$_;
+		$val;
 	} $self->list;
 	$data->{list} =  \@list;
 	return($data);
 }
 #}}}
 #{{{ dump
-=head3 dump
-
-Return string with dumped data
-
-=cut
+#Return string with dumped data
 sub dump {
 	my $self = shift;
 	my $dump = "\n" . $self->SUPER::dump . "\n\nlist = [\n";
@@ -129,15 +119,53 @@ sub dump {
 	return($dump);
 }
 #}}}
+#{{{ search
+#Return array with items corresponding, with parameters 
+#passed as hash
+#ex.: $self->search(articlenumber => '3334422')
+sub search {
+	my $self = shift;
+	my %hash = @_;
+	my $equals = 0;
+	my @arr;
 
+	foreach my $r (  $self->list ) {
+		if ( ref($r) eq 'HASH' ) {
+			$equals = grep { ( ( defined($r->{$_}) &&  defined($hash{$_}) && $r->{$_} eq $hash{$_} ) || ( ! defined($r->{$_}) &&  ! defined($hash{$_}) ) ) } keys(%hash);
+		} else {
+			$equals = grep { ( ( defined($r->$_) &&  defined($hash{$_}) && $r->$_ eq $hash{$_} ) || ( ! defined($r->$_) &&  ! defined($hash{$_}) ) ) } keys(%hash);
+		}
+		CORE::push(@arr, $r) if ( $equals == scalar(keys(%hash)) );
+	}
+	return(@arr);
+}
+#}}}
+#{{{ tmp
+#return
+sub tmp {
+	my $self = shift;
+
+	$self->c->tmp->{ref($self)} = {} if ( ! $self->c->tmp->{ref($self)} );
+	return($self->c->tmp->{ref($self)});
+}
+#}}}
+#{{{ validate
+#Overload Mojolicious::Cafe::Base::validate to keep session columns
+sub validate {
+	my $self = shift;
+	my $params = shift;
+	$self->debug($params);
+	my $retval = $self->SUPER::validate($params);
+	foreach my $key ( map { $_->{key} } grep { $_->{session}; } $self->columns ) {
+		$self->tmp->{$key} = $self->$key;
+	}
+	return($retval);
+}
+#}}}
 
 #{{{ private query_compiled
-=head3 C<query_compiled>
-
-Remove parameters and dynamically used SQL keywords
-from query
-
-=cut
+#Remove parameters and dynamically used SQL keywords
+#from query
 sub query_compiled {
 	my $self = shift;
 
@@ -157,11 +185,7 @@ sub query_compiled {
 }
 #}}}
 #{{{ private query_params
-=head3 C<query_params>
-
-Prepare params for compiled query 
-
-=cut
+#Prepare params for compiled query 
 sub query_params {
 	my $self = shift;
 
@@ -170,21 +194,20 @@ sub query_params {
 	while ( $query =~ s/@(\w+)/?/ ) {
 		my $param;
 		eval("\$param = \$self->$1;");
-		push(@params, $param);
+		CORE::push(@params, $self->$1);
 	}
 	$self->c->app->log->debug("Query parameters:\n" . $self->c->app->dumper(\@params)) if ( scalar(@params) ); 
 	return(@params);
 }
 #}}}
-#{{{ private convert_timestamps
-#Convert timestamp/date postgresql columns in list to Datetime class.
-sub convert_timestamps {
+#{{{ private default_from_session
+#Set default values from previous session
+sub default_from_session {
 	my $self = shift;
-
-	my @cdt = map { $_->{key} } grep { $_->{type} == $self->c->DB_DATE } $self->columns;
-
-	foreach my $r ( $self->list ) {
-		map { $r->{$_} = $self->func_parse_pg_date($r->{$_}); } @cdt;
+	foreach my $key ( map { $_->{key} } grep { $_->{session}; } $self->columns ) {
+		if ( exists($self->tmp->{$key}) ) {
+			$self->$key($self->tmp->{$key});	
+		}
 	}
 }
 #}}}
@@ -192,3 +215,30 @@ sub convert_timestamps {
 1;
 
 __END__
+
+=head1 NAME
+
+Mojolicious::Cafe::Base - base class to build Postgresql Web applications
+
+
+=head1 DIRECTIVES
+
+Mojolicious::Cafe::Listing inherites all directivs from Mojolicious::Cafe::Base and implements the following new ones.
+
+=head2 session
+
+If B<session> is true keep column value in session for filter usage. 
+
+C<session =E<gt> 1>
+
+=head1 METHODS
+
+Mojolicious::Cafe::Listing inherites all methods from Mojolicious::Cafe::Base and implements the following new ones.
+
+=head2 tmp
+
+B<tmp> return temporary hash to keep values in session structure. The tmp hash is uniques per class (not per instance).
+Internally is set default values from session for filters.
+
+C<$self->tmp->{key} = 100;>
+C<my $value = $self->tmp->{key};>
