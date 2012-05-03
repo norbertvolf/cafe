@@ -2,7 +2,7 @@ package Mojolicious::Cafe;
 use utf8;
 
 use Mojo::Base 'Mojolicious';
-
+use Digest::SHA qw(sha1_base64);
 use File::Basename;
 
 #Definie configuraion files paths TODO (use dynamic way)
@@ -35,6 +35,28 @@ sub startup {
 
 	#Make sessions valid to end of user session
 	$self->sessions->default_expiration(0);
+
+	$self->hook(before_dispatch => sub {
+		my $c = shift;
+		#Check database connection
+		$c->dbh(check => 1);
+		#Fetch session hash from Memcache
+		if ( defined($c->session->{_sessionid}) ) {
+			$c->tmp($c->memd->get(join("|", "sessionid", $c->session->{_sessionid})) // {});
+		} else {
+			$c->session->{_sessionid} = sha1_base64(join("",  rand(), $c->config->{secret}));
+		}
+	});
+	$self->hook(after_dispatch => sub {
+		my $c = shift;
+		#Check database connection
+		$c->dbh(check => 1);
+		#Workaround about forgot transactions. Fire query to force transaction
+		$c->dbh->do("SELECT 'Keep alive connection'");
+		#Save tmp hash to memcache
+		$c->memd->set(join("|", "sessionid", $c->session->{_sessionid}), $c->tmp);
+	});
+
 }
 #}}}
 #{{{ setup_config
