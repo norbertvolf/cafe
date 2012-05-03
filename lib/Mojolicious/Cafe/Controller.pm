@@ -1,14 +1,16 @@
 package Mojolicious::Cafe::Controller;
 
 use utf8;
-
 use Mojo::Base 'Mojolicious::Controller';
-
 use Mojo::Exception;
 use DBI;
 use Cache::Memcached;
 use Schema::User;
 use POSIX qw(strftime locale_h setlocale LC_ALL);
+
+#tmp hash to keep tmp data in session (in user you can keep data per user)
+#see after_dispatch and before_dispatch hook in Mojolicious::Cafe
+has 'tmp' => sub { return({}) };
 
 #{{{ vhost
 #Return actual served host
@@ -22,15 +24,18 @@ sub vhost {
 }
 #}}}
 #{{{ config
-#Return hash with configurationi parameter
-#for actual vhost
+#Return hash with configuration or
+#return value if configuration parameter
+#name is passed
 sub config {
 	my $self = shift;
 
-	if ( ! exists( $self->app->vconfig->{$self->vhost} ) ) {
-		Mojo::Exception->throw("There is no configuration for '" . $self->vhost . "'") 
+	Mojo::Exception->throw("There is no configuration for '" . $self->vhost . "'") if ( ! exists( $self->app->vconfig->{$self->vhost} ) );
+	if ( scalar(@_ ) ) {
+		return($self->app->vconfig->{$self->vhost}->{shift()});
+	} else {
+		return($self->app->vconfig->{$self->vhost});
 	}
-	return($self->app->vconfig->{$self->vhost});
 }
 #}}}
 #{{{ dbh
@@ -45,14 +50,17 @@ sub dbh {
 	if ( ! exists( $self->config->{_dbh} ) ) {
 		$self->app->log->warn("Connecting to database...");
 		$self->config->{_dbh} = DBI->connect($self->config->{dbi_dsn}, $self->config->{dbi_user}, $self->config->{dbi_pass}, $self->config->{dbi_attr});
-	} elsif ( ! $self->config->{_dbh}->ping ) {
-		$self->app->log->warn("Database connection has disconnected. Trying to reconnect...");
-		$self->config->{_dbh}->disconnect;
-		$self->config->{_dbh} = DBI->connect($self->config->{dbi_dsn}, $self->config->{dbi_user}, $self->config->{dbi_pass}, $self->config->{dbi_attr});
-	} elsif ( $params{check} && $self->config->{_dbh}->ping > 1 ) {
-		$self->app->log->warn('Database connection is dirty. Cleanup..');
-		$self->config->{_dbh}->disconnect ;
-		$self->config->{_dbh} = DBI->connect($self->config->{dbi_dsn}, $self->config->{dbi_user}, $self->config->{dbi_pass}, $self->config->{dbi_attr});
+	} else {
+		my $ping = $self->config->{_dbh}->ping;
+		if ( ! $ping ) {
+			$self->app->log->warn("Database connection has disconnected. Trying to reconnect...");
+			$self->config->{_dbh}->disconnect;
+			$self->config->{_dbh} = DBI->connect($self->config->{dbi_dsn}, $self->config->{dbi_user}, $self->config->{dbi_pass}, $self->config->{dbi_attr});
+		} elsif ( $params{check} && $ping > 1 ) {
+			$self->app->log->warn('Database connection is dirty. Cleanup..');
+			$self->config->{_dbh}->disconnect ;
+			$self->config->{_dbh} = DBI->connect($self->config->{dbi_dsn}, $self->config->{dbi_user}, $self->config->{dbi_pass}, $self->config->{dbi_attr});
+		}
 	}
 	return($self->config->{_dbh});
 }
@@ -146,6 +154,24 @@ sub FIRST { return( 4 ); }
 sub PAGE { return( 5 ); }
 sub PAGESIZE { return( 20 ); }
 #}}}
+#{{{ caller
+#Return string with caller
+sub caller {
+	my $self = shift;
+	my @stack;
+	my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash);
+	my ($prevline, $prevfilename);
+	my $i = 0;	
+	($package, $prevfilename, $prevline, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller($i++);
+	do {
+		($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller($i++);
+		$subroutine = ($package . $subroutine) if ( $subroutine && $subroutine eq '(eval)' );
+		push(@stack, "($i) $subroutine:$prevline ($prevfilename)") if ($subroutine);
+		($prevfilename, $prevline) = ($filename, $line);
+	} while ( $subroutine && $i < 5 );
+	return("\n" . join("\n", @stack) . "\n...\n");
+}
+#}}}
 
 1;
 
@@ -169,11 +195,11 @@ implements the following new ones.
 
 =head2 C<config>
 
-  my $secret = $app->config->{secret};
+	my $secret = $app->config->{secret};
+	my $secret = $app->config('secret');
 
-The configuration parameters  of Caramel, The configuration is depends
-on actual virtual hosts.
-
+Return the configuration hash  of Caramel or value of passed parameter, 
+The configuration is depends on actual virtual hosts.
 
 =head2 C<dbh>
 
@@ -193,10 +219,6 @@ is depend on virtual host.
 
 Return actual vhost as string.
 
-
-=head2 C<user>
-
-Return actual logged user
 
 =head1 SEE ALSO
 
