@@ -2,8 +2,6 @@ package Mojolicious::Cafe::Class;
 
 use Mojo::Base 'Mojolicious::Cafe::Base';
 
-has exists => 0;
-
 #{{{ new
 #Create new instance of Cafe::Mojo::Class
 sub new {
@@ -20,7 +18,8 @@ sub check {
 	my $self = shift;
 	my $def = shift;
 	#Exists primary key 
-	Mojo::Exception->throw("Not defined primary key.") if ( ! scalar(grep { defined($_->{primary_key}) && $_->{primary_key} == 1 } $self->columns($def)) );
+	Mojo::Exception->throw("Not defined primary key." . $self->c->caller) if ( ! scalar(grep { defined($_->{primary_key}) && $_->{primary_key} == 1 } $self->columns($def)) );
+
 	#Exists entity key
 	Mojo::Exception->throw("Not defined entity.") if ( ! exists($def->{entity}) || ! defined($def->{entity}) );
 
@@ -33,17 +32,20 @@ sub check {
 #passed as parameter array. 
 sub load {
 	my $self = shift;
-	my %params = @_;
-
 	if ( ! $self->loaded ) {
 		#Primary key exists do download from database
 		if ( scalar( $self->pkc ) ) {
 			#Prepare query to fetch data from pgsql database
 			my $query = "SELECT * FROM " . $self->entity . " WHERE " . join(" AND ",  map { "$_->{key} = ?" } $self->pkc );
-			$self->c->app->log->debug("$query (". join (',', $self->pkv) . ")");
+			$self->c->app->log->debug("$query (". join (',', map { $_ // 'NULL' } $self->pkv) . ")");
 			#Execute query
 			my $sth = $self->dbh->prepare($query);
-			$sth->execute($self->pkv);
+			eval {
+				$sth->execute($self->pkv);
+			};
+			if ( $@ ) {
+				Mojo::Exception->throw($@ . $self->c->caller);
+			}
 			$self->loaded(1);
 			if ( my $row = $sth->fetchrow_hashref() ) {
 				#Fill instance from model
@@ -56,6 +58,9 @@ sub load {
 				}
 				#Set record as exists
 				$self->exists(1);
+				$self->changed(0);
+			} else {
+				$self->exists(0);
 			}
 		}
 	}
@@ -76,11 +81,6 @@ sub search {
 	my $self = shift;
 	my %params = @_;
 
-	for( my $i = 0; $i < 10; $i++) {
-	my ($package, $filename, $line) = caller($i);
-	$self->c->app->log->debug($package, $filename, $line);
-	}
-
 	#Prepare query to fetch data from pgsql database
 	my @params = map { $params{$_} } keys(%params);
 	my $query = "SELECT " . join( ',', map { $_->{key} } $self->pkc) . " FROM " . $self->entity . " WHERE " . join(" AND ",  map { "$_ = ?" } keys(%params) );
@@ -98,71 +98,70 @@ sub search {
 #}}}
 #{{{ save
 #Save to database instance of Cafe::Mojo::Class. Class must 
-#contain $self->{_definition}->{entity}. For new identifier 
-#you must define   $self->{_definition}->{sequence}.
-#You must also define columns see SYNOPSIS.
-#If memcached_servers option is defined in apache configuration
-#save method also save data to memcached server
+#You must also define columns in directives
 sub save {
 	my $self = shift;
-	if ( exists($self->definition->{columns}->{stateuser}) && $self->c->user) {
-		$self->stateuser(defined($self->c->user->iduser) ? $self->c->user->iduser : 0);
-	}
-
-	#Set last modified time
-	if ( exists($self->definition->{columns}->{statestamp}) ) {
-		$self->statestamp($self->c->cnow);
-	}
-
-	#Set state bits 
-	if ( $self->definition->{columns}->{state} ) {
-		$self->state(0) unless ( defined($self->state) );
-		if ( ($self->state & 1) == 0 ) {
-			$self->state($self->state | 1);
-		} elsif( ($self->state & 1) == 1 && ($self->state & 2) == 0 ) {
-			$self->state($self->state | 2);
+	#"changed" is up when attributes are changed via getter/setter
+	#no change attributes via class hash directly !!!!!!!!! or you
+	#must know what happened
+	if ( $self->changed ) {
+		if ( exists($self->definition->{columns}->{stateuser}) && $self->c->user) {
+			$self->stateuser(defined($self->c->user->iduser) ? $self->c->user->iduser : 0);
 		}
-	}
 
-	#Check save needs 
-	if ( $self->definition && $self->entity && scalar($self->columns) && scalar($self->pkc()) ) {
-		if ( scalar($self->pkc) ==  1 && scalar( grep { defined } $self->pkv ) == 0 && $self->sequence ) { 
-			#Prepare INSERT for entities with sequence and single primary key
-			#Find next primary key value
-			my $sth = $self->dbh->prepare(q(SELECT nextval(?) as id));
-			$sth->execute($self->sequence) or Mojo::Exception->throw("$!");
-			if ( my $row = $sth->fetchrow_hashref() ) {
-				my $col = ($self->pkc)[0]->{key};
-				eval{$self->$col($row->{id})};
-				$self->c->app->log->debug("New sequence value from " . $self->sequence . " = $row->{id}");
-			} else {
-				Mojo::Exception->throw("Cant fetch next value from sequence "  . $self->sequence);
+		#Set last modified time
+		if ( exists($self->definition->{columns}->{statestamp}) ) {
+			$self->statestamp($self->c->cnow);
+		}
+
+		#Set state bits 
+		if ( $self->definition->{columns}->{state} ) {
+			$self->state(0) unless ( defined($self->state) );
+			if ( ($self->state & 1) == 0 ) {
+				$self->state($self->state | 1);
+			} elsif( ($self->state & 1) == 1 && ($self->state & 2) == 0 ) {
+				$self->state($self->state | 2);
 			}
-			#Pripravime sql dotaz
-			my $query = "INSERT INTO " . $self->entity . "(" . join(", ", map { $_->{key} } ($self->pkc, $self->attrc) ) . ") VALUES (" . join(", ", map { "?" } ( $self->pkc, $self->attrc) ) . ")";
-			$self->c->app->log->debug("$query (". join (',', map { $_ // 'NULL' } $self->pkv, $self->attrv) . ")");
-			$sth = $self->dbh->prepare($query);
-			$self->root->set_locale("C");
-			$sth->execute($self->pkv, $self->attrv) or Mojo::Exception->throw("$!");
-			$self->root->restore_locale();
-		} elsif ( scalar($self->pkc) == 1 && scalar( grep { defined } $self->pkv ) == 1 ) {
-			#Prepare UPDATE query for single primary keys
-			my $query = "UPDATE " . $self->entity . " SET " . join(" = ?,", map { $_->{key} } $self->attrc) . " = ? WHERE " . join(" = ?,", map { $_->{key} } $self->pkc) . " = ?";
-			$self->c->app->log->debug("$query (". join (',', map { $_ // 'NULL' } ($self->attrv, $self->pkv) ) . ")");
-			my $sth = $self->dbh->prepare($query);
-			$sth->execute($self->attrv, $self->pkv);
-		} else {
-			Mojo::Exception->throw("Not defined save method for this combination of primary keys");
 		}
-	} else {
-		if ( ! $self->definition ) {
-			Mojo::Exception->throw("Not usable definition to save object`");
-		} elsif ( ! $self->entity ) {
-			Mojo::Exception->throw("Not defined entity (table). Entity parameter is mandatory to save object.");
-		} elsif ( ! scalar($self->columns) ) {
-			Mojo::Exception->throw("There is no column definitions. Columns definition is mandatory to save object.");
-		} elsif ( ! scalar($self->pkc) ) {
-			Mojo::Exception->throw("There is no primary key definitions. Primary key definition is mandatory to save object.");
+
+		#Check save needs 
+		if ( $self->definition && $self->entity && scalar($self->columns) && scalar($self->pkc()) ) {
+
+			#Generate new id if possible (just one primary key and sequence exists)
+			$self->nextval if ( scalar($self->pkc) ==  1 && scalar( grep { defined } $self->pkv ) == 0 && $self->sequence );
+
+			if ( scalar($self->pkc) == scalar( grep { defined } $self->pkv ) && ! $self->exists ) {
+				#INSERT record to database
+				my $query = "INSERT INTO " . $self->entity . "(" . join(", ", map { $_->{key} } ($self->pkc, $self->attrc) ) . ") VALUES (" . join(", ", map { "?" } ( $self->pkc, $self->attrc) ) . ")";
+				$self->c->app->log->debug("$query (". join (',', map { $_ // 'NULL' } $self->pkv, $self->attrv) . ")");
+				my $sth = $self->dbh->prepare($query);
+				$self->root->set_locale("C");
+				eval { 
+					$sth->execute($self->pkv, $self->attrv);
+				}; 
+				if ( $@ ) {
+					Mojo::Exception->throw("$@" . $self->c->caller );
+				}
+				$self->root->restore_locale();
+			} elsif ( scalar($self->pkc) == scalar( grep { defined } $self->pkv ) && $self->exists ) {
+				#Prepare UPDATE query for single primary keys
+				my $query = "UPDATE " . $self->entity . " SET " . join(" , ", map { "$_->{key} = ?" } $self->attrc) . " WHERE " . join(" AND ", map { "$_->{key} = ?" } $self->pkc);
+				$self->c->app->log->debug("$query (". join (',', map { $_ // 'NULL' } ($self->attrv, $self->pkv) ) . ")");
+				my $sth = $self->dbh->prepare($query);
+				$sth->execute($self->attrv, $self->pkv);
+			} else {
+				Mojo::Exception->throw("Not defined all primary key values.\nKeys: " . join(',', map { $_->{key} } $self->pkc) . "\nValues:" .  join(',', $self->pkv) . $self->c->caller);
+			}
+		} else {
+			if ( ! $self->definition ) {
+				Mojo::Exception->throw("Not usable definition to save object`");
+			} elsif ( ! $self->entity ) {
+				Mojo::Exception->throw("Not defined entity (table). Entity parameter is mandatory to save object.");
+			} elsif ( ! scalar($self->columns) ) {
+				Mojo::Exception->throw("There is no column definitions. Columns definition is mandatory to save object.");
+			} elsif ( ! scalar($self->pkc) ) {
+				Mojo::Exception->throw("There is no primary key definitions. Primary key definition is mandatory to save object.");
+			}
 		}
 	}
 }
@@ -219,8 +218,8 @@ sub validator {
 		my %columns = %{$self->definition->{columns}};
 		foreach my $key ( keys(%columns) ) {
 			if ( $columns{$key}->{rule} ) {
-				if ( $columns{$key}->{type} == $self->c->DB_VARCHAR && $self->column_info($key)->{TYPE_NAME} eq 'character varying' ) {
-					$columns{$key}->{max_length} = $self->column_info($key)->{COLUMN_SIZE};
+				if ( $columns{$key}->{type} == $self->c->DB_VARCHAR && $self->priv_column_info($key)->{TYPE_NAME} eq 'character varying' ) {
+					$columns{$key}->{max_length} = $self->priv_column_info($key)->{COLUMN_SIZE};
 				}
 			}
 		}
@@ -235,31 +234,68 @@ sub remove {
 	my $self = shift;
 	if ( exists( $self->definition->{columns}->{state} ) ) {
 		#Prepare UPDATE query to mark record as deleted
-		my $query = "UPDATE " . $self->entity . " SET state = state | 4  WHERE " . join(" = ?,", map { $_->{key} } $self->pkc) . " = ?";
-		$self->c->app->log->debug("$query (". join (',', map { $_ // 'NULL' } ($self->attrv, $self->pkv) ) . ")");
+		my $query = "UPDATE " . $self->entity . " SET state = state | 4  WHERE " . join(" AND ",  map { "$_->{key} = ?" } $self->pkc );
+		$self->c->app->log->debug("$query (". join (',', map { $_ // 'NULL' } ($self->pkv) ) . ")");
 		my $sth = $self->dbh->prepare($query);
 		$sth->execute($self->pkv);
 	} else {
 		#Prepare DELETE query to remove record from database
-		my $query = "DELETE FROM " . $self->entity . " WHERE " . join(" = ?,", map { $_->{key} } $self->pkc) . " = ?";
-		$self->c->app->log->debug("$query (". join (',', map { $_ // 'NULL' } ($self->attrv, $self->pkv) ) . ")");
+		my $query = "DELETE FROM " . $self->entity . " WHERE " . join(" AND ",  map { "$_->{key} = ?" } $self->pkc );
+		$self->c->app->log->debug("$query (". join (',', map { $_ // 'NULL' } ($self->pkv) ) . ")");
 		my $sth = $self->dbh->prepare($query);
 		$sth->execute($self->pkv);
 	}
 	return($self->SUPER::validator);
 }
 #}}}
-
-#{{{private column_info
-#Return column info for column passed as parameter
-sub column_info {
+#{{{ nextval
+#Generate next value from sequence and set sequence to primary key column
+sub nextval {
 	my $self = shift;
+	my $sth = $self->dbh->prepare(q(SELECT nextval(?) as id));
+	$sth->execute($self->sequence) or Mojo::Exception->throw("$!");
+	if ( my $row = $sth->fetchrow_hashref() ) {
+		my $col = ($self->pkc)[0]->{key};
+		eval{$self->$col($row->{id})};
+		$self->c->app->log->debug("New sequence value from " . $self->sequence . " = $row->{id}");
+	} else {
+		Mojo::Exception->throw("Cant fetch next value from sequence "  . $self->sequence);
+	}
+}
+#}}}
+#{{{ exists 
+#If record exists returns 1, if record does not exists return 0, if instance doesn know return undef
+sub exists {
+	my $self = shift;
+	if ( scalar(@_) ) {
+		$self->{_exists} = shift;
+	}
+	if ( ! exists($self->{_exists}) ) {
+		if ( scalar( $self->pkc ) ) {
+			#Prepare query to fetch data from pgsql database
+			my $query = "SELECT 1 FROM " . $self->entity . " WHERE " . join(" AND ",  map { "$_->{key} = ?" } $self->pkc );
+			$self->c->app->log->debug("$query (". join (',', $self->pkv) . ")");
+			#Execute query
+			my $sth = $self->dbh->prepare($query);
+			$sth->execute( $self->pkv );
+			$self->{_exists} =  scalar(@{$sth->fetchall_arrayref()});
+		}
+	}
+	return($self->{_exists});
+}
+#}}}
+
+#{{{priv_column_info
+#Return column info for column passed as parameter
+sub priv_column_info {
+	my $self = shift;
+	my $column = shift;
 
 	if ( ! $self->{_column_info} ) {
 		my $table = $self->entity;
 		my $schema;
 		my $column;
-		if ( $table =~ /([^.]+)\.\(.*\)/ ) {
+		if ( $table =~ /([^.]+)\.(.*)/ ) {
 			$schema = $1;
 			$table = $2;
 		}
@@ -267,12 +303,12 @@ sub column_info {
 		$self->{_column_info} = $sth->fetchall_arrayref({});
 	}
 	
-	my @retval = grep { $_->{COLUMN_NAME} eq 'username' } @{$self->{_column_info}};
+	my @retval = grep { $_->{COLUMN_NAME} eq $column } @{$self->{_column_info}};
 
 	if ( scalar(@retval) ) {
 		return($retval[0]);
 	} else {
-		Mojo::Exception->throw("Not defined requested column.");
+		Mojo::Exception->throw("Column '$column' is not exists in database check table '" . $self->entity . "'." . $self->c->caller);
 	}
 }
 #}}}
