@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.39-1) stable; urgency=low
+
+   * add lastuser autoloader
+
+ -- Norbert Volf <norbert@volf.eu>  Mon,  11 May 2012 20:58:00 +0200
+
 libcafe-application-perl (0.8.38-1) stable; urgency=low
 
    * add changed attribute, add json method, rich directive documentation
