@@ -23,6 +23,18 @@ sub check {
 	#Exists entity key
 	Mojo::Exception->throw("Not defined entity.") if ( ! exists($def->{entity}) || ! defined($def->{entity}) );
 
+	#Add last user capability
+	if ( ! exists($def->{autoloaders}->{lastuser}) && ! exists($def->{columns}->{lastuser}) && exists($def->{columns}->{stateuser}) ) {
+		$def->{autoloaders}->{lastuser} = {
+			class => $self->c->config->{user_class},
+			params => {
+				iduser => sub { my $self = shift; return($self->stateuser ? $self->stateuser : $self->c->user->iduser); }
+
+			},
+		};
+	};
+	$self->SUPER::check($def);
+
 	return($def);
 }
 #}}}

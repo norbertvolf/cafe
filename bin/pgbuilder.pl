@@ -159,7 +159,7 @@ $output ="package " . ucfirst($schema) . "::" . join("::",  map { ucfirst($_) } 
 use utf8;
 
 use Mojo::Base 'Mojolicious::Cafe::Class';
-use Scalar::Util;
+use Scalar::Util qw(looks_like_number);
 
 sub new {
 	my (\$class, \$c, \$$primarykey) = \@_;
@@ -168,7 +168,7 @@ sub new {
 		\$c, 
 		$output
 	); 
-	\$self->$primarykey(\$$primarykey) if ( \$$primarykey );
+	\$self->$primarykey(\$$primarykey) if ( looks_like_number(\$$primarykey) );
 	\$self->load if ( \$$primarykey );	
 	return \$self;
 }
