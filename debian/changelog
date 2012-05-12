@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.40-1) stable; urgency=low
+
+   * add versioning class capability
+
+ -- Norbert Volf <norbert@volf.eu>  Mon,  12 May 2012 19:01:00 +0200
+
 libcafe-application-perl (0.8.39-1) stable; urgency=low
 
    * add lastuser autoloader
