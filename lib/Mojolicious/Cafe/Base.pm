@@ -181,8 +181,6 @@ sub validator {
 		my %fields;
 		my %columns = %{$self->definition->{columns}};
 		foreach my $key ( keys(%columns) ) {
-			
-
 			if ( $columns{$key}->{rule} ) {
 				#Create validator from attributes where rule directive is true
 				$fields{$key} = {};

@@ -22,15 +22,33 @@ sub new {
 #You must also define columns in directives
 sub save {
 	my $self = shift;
+	my $changed = $self->changed;
 	$self->SUPER::save();
-	my $sth = $self->c->dbh->prepare( q(INSERT INTO public.revision( tablename, id, json, state, stateuser, statestamp ) VALUES ( ?, ?, ?, ?, ?, ? ) ) );
-	eval { 
-		$sth->execute($self->entity, $self->pkv, $self->json, $self->state, $self->stateuser, $self->statestamp);
-	}; 
-	if ( $@ ) {
-		Mojo::Exception->throw("$@" . $self->c->caller );
+	if ( $changed ) {
+		my $sth = $self->c->dbh->prepare( q(INSERT INTO public.revision( tablename, id, json, state, stateuser, statestamp ) VALUES ( ?, ?, ?, ?, ?, ? ) ) );
+		eval { 
+			$sth->execute($self->entity, $self->pkv, $self->json, $self->state, $self->stateuser, $self->statestamp);
+		}; 
+		if ( $@ ) {
+			Mojo::Exception->throw("$@" . $self->c->caller );
+		}
 	}
 
+}
+#}}}
+#{{{ hash
+#Add revision info if possible to hash
+sub hash {
+	my $self = shift;
+	my $data = $self->SUPER::hash();
+	if ( scalar($self->pkc) == 1 ) {
+		$data->{revisions} = {} if ( ! exists($data->{revisions}) );
+		if ( ref( $data->{revisions} ) eq 'HASH' )  {
+			$data->{revisions}->{tablename} = $self->entity;
+			$data->{revisions}->{id} = ($self->pkv)[0];
+		}
+	}
+	return($data);
 }
 #}}}
 
