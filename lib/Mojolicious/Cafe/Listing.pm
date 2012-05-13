@@ -85,8 +85,12 @@ sub hash {
 		my $val;
 		if ( ref($_) eq "HASH") {
 			$val = $_;
-			#Convert statestamp to locale date format
-			foreach my $key ( map { $_->{key} } grep { $_->{type} == $self->c->DB_DATE } $self->columns ) {
+			#Use user defined formating function
+			foreach my $key ( map { $_->{key} } grep { $_->{format} } $self->columns ) {
+				$val->{$key} = &{$self->definition->{columns}->{$key}->{format}}($val->{$key});
+			}
+			#Convert timestamps to locale date format
+			foreach my $key ( map { $_->{key} } grep { $_->{type} == $self->c->DB_DATE && ! exists($_->{format}) } $self->columns ) {
 				$val->{$key} = defined($val->{$key}) ? $val->{$key}->strftime("%x") : undef ;
 			}
 		} elsif ( ref($_) eq "ARRAY") {
@@ -230,6 +234,12 @@ Mojolicious::Cafe::Listing inherites all directivs from Mojolicious::Cafe::Base 
 If B<session> is true keep column value in session for filter usage. 
 
 C<session =E<gt> 1>
+
+=head2 format
+
+B<format> is anonymous function to re
+
+C<format =E<gt> sub { my $value = shift; return( sprintf('%03d', $value) ) }>
 
 =head1 METHODS
 
