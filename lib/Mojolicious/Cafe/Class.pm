@@ -29,7 +29,6 @@ sub check {
 			class => $self->c->config->{user_class},
 			params => {
 				iduser => sub { my $self = shift; return($self->stateuser ? $self->stateuser : $self->c->user->iduser); }
-
 			},
 		};
 	};
@@ -129,9 +128,9 @@ sub save {
 		#Set state bits 
 		if ( $self->definition->{columns}->{state} ) {
 			$self->state(0) unless ( defined($self->state) );
-			if ( ($self->state & 1) == 0 ) {
+			if ( ( ($self->state & 1) == 0 ) ) {
 				$self->state($self->state | 1);
-			} elsif( ($self->state & 1) == 1 && ($self->state & 2) == 0 ) {
+			} else {
 				$self->state($self->state | 2);
 			}
 		}
@@ -190,7 +189,7 @@ sub pkc {
 #Return list of primary keys values
 sub pkv {
 	my $self = shift;
-	$self->{_pkv} = [ map { my $col = $_->{key};eval{$self->$col}; } $self->pkc ];
+	$self->{_pkv} = [ map { my $col = $_->{key};$self->$col; } $self->pkc ];
 	return(@{$self->{_pkv}});
 }
 #}}}
@@ -225,7 +224,7 @@ sub sequence {
 #to columns defintion
 sub validator {
 	my $self = shift;
-	#Is validator memoized
+	#Add max_length directive base on database structure
 	if ( ! $self->c->app->validator( ref($self) ) ) {
 		my %columns = %{$self->definition->{columns}};
 		foreach my $key ( keys(%columns) ) {
@@ -237,6 +236,18 @@ sub validator {
 		}
 	}
 	return($self->SUPER::validator);
+}
+#}}}
+#{{{ validate
+#Validate record - first validate primary key and load original record
+#and then use parent validate method
+sub validate {
+	my $self = shift;
+	my $params = shift;
+	my %pk = map { $_->{key} => $params->{$_->{key}} } $self->pkc;
+	$self->SUPER::validate(\%pk);
+	$self->load;
+	return($self->SUPER::validate($params));
 }
 #}}}
 #{{{ remove
@@ -294,6 +305,27 @@ sub exists {
 		}
 	}
 	return($self->{_exists});
+}
+#}}}
+#{{{ hash
+#Add lastuser inform if possible to hash
+sub hash {
+	my $self = shift;
+	my $data = $self->SUPER::hash();
+	if ( ! exists( $data->{revisions} ) ) {
+		$data->{revisions} = { last => {} };
+		if ( exists( $self->definition->{columns}->{statestamp} ) ) {
+			if ( defined($self->statestamp) && ref($self->statestamp) eq 'DateTime' ) {
+				$data->{revisions}->{last}->{statestamp} = $self->statestamp->strftime('%x %X');
+			} else {
+				$data->{revisions}->{last}->{statestamp} = "";
+			}
+		}
+		if ( exists($self->definition->{columns}->{stateuser}) ) {
+			$data->{revisions}->{last}->{signature} = $self->lastuser->signature
+		}
+	}
+	return($data);
 }
 #}}}
 
