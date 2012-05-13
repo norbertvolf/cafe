@@ -1,3 +1,14 @@
+libcafe-application-perl (0.8.41-1) stable; urgency=low
+
+   * put all revisions to hash strucuture
+   * save revisions if record has been changed only
+   * overwrite validate method to use 2-phase validating (validate pk and then validate other attrs)
+   * put revisions structure to hash (if state* attrs are defined
+   * add format directive to Mojolicous::Cafe::Listing class
+   * add versioning capability
+
+ -- Norbert Volf <norbert@volf.eu>  Mon,  13 May 2012 23:49:00 +0200
+
 libcafe-application-perl (0.8.40-1) stable; urgency=low
 
    * add versioning class capability
