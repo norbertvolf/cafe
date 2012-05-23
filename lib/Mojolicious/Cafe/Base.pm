@@ -90,7 +90,8 @@ sub hash {
 	foreach my $key (sort(keys(%{$self->definition->{columns}}))) {
 		if ( $self->$key && $self->definition->{columns}->{$key}->{type} == $self->c->DB_DATE ) {
 			#Format datetime attributes
-			$data->{$key} = defined($self->$key) ? $self->$key->strftime("%x") : undef;
+			my $pattern = $self->c->user->locale eq 'en_US.UTF-8' ? "\%m\/\%d\/\%Y" : "%x";
+			$data->{$key} = defined($self->$key) ? $self->$key->strftime($pattern) : undef;
 		} elsif ( $self->$key && $self->definition->{columns}->{$key}->{type} == $self->c->DB_NUMERIC ) {
 			#Format numeric attributes
 			if ( exists($self->definition->{columns}->{$key}->{format}) ) {
@@ -152,7 +153,7 @@ sub validate {
 			if ( $self->validator->validate($key) ) {
 				#Copy value to instance of class by setter
 				if ( $columns->{$key}->{type} == $self->c->DB_DATE ) {
-					$self->$key( $self->func_parse_date($params->{$key}));
+					$self->$key( $self->func_parse_date($params->{$key}) );
 				} elsif ( $columns->{$key}->{type} == $self->c->DB_INT && defined($params->{$key}) ) {
 					$self->$key($params->{$key} + 0);
 				} elsif ( $columns->{$key}->{type} == $self->c->DB_NUMERIC && defined($params->{$key}) ) {
@@ -186,7 +187,7 @@ sub validator {
 				$fields{$key} = {};
 				$columns{$key}->{filters} = 'trim' if ( ! $columns{$key}->{filters} );
 				if ( $columns{$key}->{type} == $self->c->DB_DATE ) {
-					$columns{$key}->{validation} = func_validate_date() if ( ! $columns{$key}->{validation} );
+					$columns{$key}->{validation} = func_validate_date($self->c->user->locale) if ( ! $columns{$key}->{validation} );
 				} elsif ( $columns{$key}->{type} == $self->c->DB_INT ) {
 					$columns{$key}->{pattern} = qr/^\d+$/ if ( ! $columns{$key}->{pattern} );
 				} elsif ( $columns{$key}->{type} == $self->c->DB_NUMERIC ) {
@@ -291,15 +292,21 @@ sub defaults {
 #{{{protected func_validate_date
 #Return function to validate date
 sub func_validate_date {
+	my $locale = shift;
 	my $retval = sub {
 		my ($self, $this_field, $all_params) = @_;
 		my $year;
 		my $month;
 		my $day;
+		
 		if ( $this_field->{value} =~ m!^((?:19|20)\d\d)[- /.]([1-9]|0[1-9]|1[012])[- /.]([1-9]|0[1-9]|[12][0-9]|3[01])! ) {
 			$year = $1;
 			$month = $2;
 			$day = $3;
+		} elsif ( $locale eq 'en_US.UTF-8' && $this_field->{value} =~ m!^([1-9]|0[1-9]|1[012])[- /.]{0,1}([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]{0,1}((?:19|20)\d\d)! ) {
+			$year = $3;
+			$month = $1;
+			$day = $2;
 		} elsif ( $this_field->{value} =~ m!^([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]{0,1}([1-9]|0[1-9]|1[012])[- /.]{0,1}((?:19|20)\d\d)! ) {
 			$year = $3;
 			$month = $2;
@@ -336,6 +343,13 @@ sub func_parse_date {
 			day    => $3,
 			locale => $self->c->user->locale,
 		);
+	} elsif ( $self->c->user->locale eq 'en_US.UTF-8' && $value =~ m!^([1-9]|0[1-9]|1[012])[- /.]{0,1}([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]{0,1}((?:19|20)\d\d)! ) {
+		$date = DateTime->new(
+			year   => $3,
+			month  => $1,
+			day    => $2,
+			locale => $self->c->user->locale,
+		);
 	} elsif ( $value =~ m!^([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]([1-9]|0[1-9]|1[012])[- /.]((?:19|20)\d\d)! ) {
 		$date = DateTime->new(
 			year   => $3,
@@ -348,6 +362,7 @@ sub func_parse_date {
 	} else {
 		Mojo::Exception->throw("Bad date format");
 	}
+
 	return($date);
 }
 #}}}
@@ -357,7 +372,7 @@ sub func_parse_pg_date {
 	my $self = shift;
 	my $value = shift;
 	my $date;
-	if ( $value =~ /(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})([+-]\d{2})/ ) {
+	if ( $value && $value =~ /(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})([+-]\d{2})/ ) {
 		$date = DateTime->new( 
 			year   => $1,
 			month  => $2,
@@ -368,7 +383,7 @@ sub func_parse_pg_date {
 			locale => $self->c->user->locale,
 			time_zone => $7 . "00",
 		);
-	} elsif ( $value =~ /(\d{4})-(\d{2})-(\d{2})/ ) {
+	} elsif (  $value && $value =~ /(\d{4})-(\d{2})-(\d{2})/ ) {
 		$date = DateTime->new( 
 			year   => $1,
 			month  => $2,

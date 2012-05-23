@@ -1,4 +1,4 @@
-package Mojolicious::Cafe::Listing;
+package Mojolicious::Cafe::List;
 
 use Mojo::Base 'Mojolicious::Cafe::Base';
 use DBD::Pg qw(:pg_types);
@@ -16,7 +16,6 @@ sub new {
 	my $c = shift;
 	my $definition = shift;
 	my $self = $class->SUPER::new($c, $definition);
-	$self->default_from_session();
 
 	#Initialize list as empty refarray
 	$self->list([]);
@@ -51,7 +50,9 @@ sub load {
 		foreach my $r ( $self->list ) {
 			#Convert timestamp from databaze to Datetime
 			map { $r->{$_} = $self->func_parse_pg_date($r->{$_}); } map { $_->{key} } grep { $_->{type} == $self->c->DB_DATE } $self->columns;
-			map { $r->{$_} = decode("utf-8", $r->{$_}); } map { $_->{key} } grep { $_->{type} == $self->c->DB_VARCHAR } $self->columns;
+			map { 
+				$r->{$_} = Encode::is_utf8($r->{$_}) ? $r->{$_} : decode("utf-8", $r->{$_}); 
+			} map { $_->{key} } grep { $_->{type} == $self->c->DB_VARCHAR } $self->columns;
 		}
 	}
 	return($self->list);
@@ -66,6 +67,13 @@ sub list {
 		Mojo::Exception->throw("List is not array reference.") if ( ! ref($self->{_list}) eq 'ARRAY' ); 
 	}
 	return(wantarray ? @{$self->{_list}} : $self->{_list});
+}
+#}}}
+#{{{ query
+#Getter for query
+sub query {
+	my $self = shift;
+	return($self->definition->{query});
 }
 #}}}
 #{{{ push
@@ -144,28 +152,6 @@ sub search {
 	return(@arr);
 }
 #}}}
-#{{{ tmp
-#return
-sub tmp {
-	my $self = shift;
-
-	$self->c->tmp->{ref($self)} = {} if ( ! $self->c->tmp->{ref($self)} );
-	return($self->c->tmp->{ref($self)});
-}
-#}}}
-#{{{ validate
-#Overload Mojolicious::Cafe::Base::validate to keep session columns
-sub validate {
-	my $self = shift;
-	my $params = shift;
-	$self->debug($params);
-	my $retval = $self->SUPER::validate($params);
-	foreach my $key ( map { $_->{key} } grep { $_->{session}; } $self->columns ) {
-		$self->tmp->{$key} = $self->$key;
-	}
-	return($retval);
-}
-#}}}
 
 #{{{ private query_compiled
 #Remove parameters and dynamically used SQL keywords
@@ -174,7 +160,7 @@ sub query_compiled {
 	my $self = shift;
 
 	#Convert to anonymous placeholders
-	my $query = $self->definition->{query};	
+	my $query = $self->query;
 	$query =~ s/@\w+/?/g;
 
 	#Add limit and offset
@@ -192,27 +178,15 @@ sub query_compiled {
 #Prepare params for compiled query 
 sub query_params {
 	my $self = shift;
-
 	my @params;
-	my $query = $self->definition->{query};	
+	my $query = $self->query;	
 	while ( $query =~ s/@(\w+)/?/ ) {
 		my $param;
-		eval("\$param = \$self->$1;");
+		$param = $self->$1;
 		CORE::push(@params, $self->$1);
 	}
-	$self->c->app->log->debug("Query parameters:\n" . $self->c->app->dumper(\@params)) if ( scalar(@params) ); 
+	$self->c->app->log->debug("Query parameters: " . join(', ', map { qq("$_") } @params) . ".") if ( scalar(@params) ); 
 	return(@params);
-}
-#}}}
-#{{{ private default_from_session
-#Set default values from previous session
-sub default_from_session {
-	my $self = shift;
-	foreach my $key ( map { $_->{key} } grep { $_->{session}; } $self->columns ) {
-		if ( exists($self->tmp->{$key}) ) {
-			$self->$key($self->tmp->{$key});	
-		}
-	}
 }
 #}}}
 
@@ -229,26 +203,8 @@ Mojolicious::Cafe::Base - base class to build Postgresql Web applications
 
 Mojolicious::Cafe::Listing inherites all directivs from Mojolicious::Cafe::Base and implements the following new ones.
 
-=head2 session
-
-If B<session> is true keep column value in session for filter usage. 
-
-C<session =E<gt> 1>
-
 =head2 format
 
 B<format> is anonymous function to re
 
 C<format =E<gt> sub { my $value = shift; return( sprintf('%03d', $value) ) }>
-
-=head1 METHODS
-
-Mojolicious::Cafe::Listing inherites all methods from Mojolicious::Cafe::Base and implements the following new ones.
-
-=head2 tmp
-
-B<tmp> return temporary hash to keep values in session structure. The tmp hash is uniques per class (not per instance).
-Internally is set default values from session for filters.
-
-C<$self->tmp->{key} = 100;>
-C<my $value = $self->tmp->{key};>

@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.42-1) stable; urgency=low
+
+   * add rich list class Mojolicious::Cafe::List::View
+
+ -- Norbert Volf <norbert@volf.eu>  Mon,  23 May 2012 15:57:00 +0200
+
 libcafe-application-perl (0.8.41-1) stable; urgency=low
 
    * put all revisions to hash strucuture
