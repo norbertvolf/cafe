@@ -50,14 +50,6 @@ sub check {
 			}
 		}
 	}
-	#WHERE is not possible because conditions are on line generated from filters
-	if ( $def->{query} =~ /WHERE/i ) {
-		Mojo::Exception->throw("Keyword WHERE is not possible in class " . ref($self) . '.');
-	}
-	#ORDER BY is not possible because ordering is on line generated from ordering
-	if ( $def->{query} =~ /ORDER BY/i ) {
-		Mojo::Exception->throw("Keyword ORDER BY is not possible in class " . ref($self) . '.');
-	}
 	return($def);
 }
 #}}}
@@ -67,9 +59,9 @@ sub validate {
 	my $self = shift;
 	my $params = shift;
 	#Validate parameter limit from client
-	$self->limit($1) if ( $params->{limit} =~ /(\d+)/ );
+	$self->limit($1) if ( $params->{limit} && $params->{limit} =~ /(\d+)/ );
 	#Validate parameter offset from client
-	$self->offset($1) if ( $params->{offset} =~ /(\d+)/ );
+	$self->offset($1) if ( $params->{offset} && $params->{offset} =~ /(\d+)/ );
 	#Validate ordering
 	$self->ordering($params->{ordering});
 	#Validate filtering
@@ -85,6 +77,8 @@ sub validate {
 				$filters{$key} = $self->definition->{filters}->{$key};
 			} elsif ( ref($params->{filters}->{$key}) eq 'HASH'  &&  ! exists($self->definition->{filters}->{$key}) ) {
 				$self->c->app->log->warn(qq(You have send filter request "$key" without filter definition in class ) . ref($self) . '.');
+			} elsif ( ! ref($params->{filters}->{$key}) eq 'HASH' ) {
+				$self->c->app->log->warn(qq(You have send filter request without valid filter definition filter value must be hash.) . ref($self) . '.');
 			}
 		} 
 		$self->{_filters} = \%filters;
@@ -102,33 +96,50 @@ sub validate {
 #generate dynamic WHERE and ORDER BY clause
 sub query {
 	my $self = shift;
-	my $query = $self->definition->{query};
 
+	my $query = $self->SUPER::query(@_);
 	#Add always filters
 	foreach my $key ( keys(%{$self->definition->{filters}}) ) {
 		my $definition = $self->definition->{filters}->{$key};
-		$self->{_filters}->{$key} = $definition if ( ! exists($self->{_filters}->{$key}) && $definition->{always} );
+		if ( 
+			! exists($self->{_filters}->{$key}) && 
+			$definition->{always} 
+		) {
+			$self->{_filters}->{$key} = $definition 
+		}
 	}
 
-	#Add WHERE clause
-	if ( exists($self->{_filters}) && ref($self->{_filters}) eq 'HASH' && scalar(keys(%{$self->{_filters}}))) {
-		#Generate WHERE clause
-		my $clause =  join (' AND ', map { "( $self->{_filters}->{$_}->{condition} )\n" } keys(%{$self->{_filters}}) );
-		$query .= "\nWHERE $clause ";
+	#Rich WHERE clause by dynamic content
+	if ( 
+		exists($self->{_filters}) && 
+		ref($self->{_filters}) eq 'HASH' && 
+		scalar(keys(%{$self->{_filters}}))
+	) {
+		#Rich WHERE clause in query
+		my @where = map { "( $self->{_filters}->{$_}->{condition} )" } grep { exists($self->{_filters}->{$_}->{condition}) } keys(%{$self->{_filters}});
+		#Add original where 
+		CORE::push(@where, $query->orig_where_clause) if ($query->orig_where_clause);
+		$query->where_clause( join (' AND ', @where) );
+
 	}
 
-	#Add ORDER BY clause
-	if ( exists($self->{_ordering}) && ref($self->{_ordering}) eq 'ARRAY' && scalar(@{$self->{_ordering}})) {
-		#Generate ORDER BY clause
-		my $clause =  join (',', @{$self->{_ordering}});
-		$query .= "\nORDER BY $clause ";
+	#Overwrite ORDER BY clause by dynamic content
+	if ( 
+		exists($self->{_ordering}) && 
+		ref($self->{_ordering}) eq 'ARRAY' && 
+		scalar(@{$self->{_ordering}}) 
+	) {
+		#Overwrite ORDER BY in query
+		$query->orderby_clause( join (',', @{$self->{_ordering}}) );
 	}
+
+	#And return query
 	return($query);
 }
 #}}}
 #{{{ ordering
 #Ordering setter
-#generate dynamic WHERE and ORDER BY clause
+#generate dynamic ORDER BY clause
 sub ordering {
 	my $self = shift;
 	my $ordering = shift;
@@ -166,15 +177,18 @@ __END__
 
 =head1 NAME
 
-Mojolicious::Cafe::List::View - extend Mojolicious::Cafe::List for user interaction
+Mojolicious::Cafe::List::View - extend Mojolicious::Cafe::List for user
+interaction
 
 =head1 DIRECTIVES
 
-Mojolicious::Cafe::Listing inherites all directivs from Mojolicious::Cafe::Base and implements the following new ones.
+Mojolicious::Cafe::Listing inherites all directivs from Mojolicious::Cafe::Base
+and implements the following new ones.
 
 =head2 ordering
 
-If B<ordering> is hash. Keys define possible ordering items and values are SQL pieces
+If B<ordering> is hash. Keys define possible ordering items and values are SQL
+pieces
 
 	ordering => {
 		idbanner => 'b.idbanner',
@@ -185,20 +199,23 @@ If B<ordering> is hash. Keys define possible ordering items and values are SQL p
 
 =head2 filters
 
-If B<filters> is hash. Keys define possible filters and values defines SQL pieces
+If B<filters> is hash. Keys define possible filters and values defines SQL 
+pieces
 
-	filters => {    
-		idterritory => { condition => 'idterritory = @idterritory', column => 'idterritory' },
-		state => { condition => 'b.state & 4 = 0', always => 1 },
-	},
+   filters => {    
+      idterritory => { condition => 'idfoo = @idfoo', column => 'idfoo' },
+      state => { condition => 'b.state & 4 = 0', always => 1 },
+   },
 
 =head1 METHODS
 
-Mojolicious::Cafe::Listing inherites all methods from Mojolicious::Cafe::Base and implements the following new ones.
+Mojolicious::Cafe::Listing inherites all methods from Mojolicious::Cafe::Base
+and implements the following new ones.
 
 =head2 tmp
 
-B<tmp> return temporary hash to keep values in session structure. The tmp hash is uniques per class (not per instance).
+B<tmp> return temporary hash to keep values in session structure. The tmp hash
+is uniques per class (not per instance).
 Internally is set default values from session for filters.
 
 C<$self->tmp->{key} = 100;>
@@ -206,14 +223,21 @@ C<my $value = $self->tmp->{key};>
 
 =head2 validate
 
-B<validate> is based on parent validate method and try to validate ordering, filters, limit and offset parameters. Default 
-values are difined by constants DEFAULT_LIMIT and DEFAULT_OFFSET.
+B<validate> is based on parent validate method and try to validate ordering, 
+filters, limit and offset parameters. Default values are difined by constants 
+DEFAULT_LIMIT and DEFAULT_OFFSET.
 
 =head2 ordering
 
 B<ordering> is used to set ordering 
 
-
 =head2 query
 
-B<query> is overwritten method from parent class. Generate SQL query with ORDER BY and WHERE clauser from ordering and filters.
+B<query> is overwritten method from parent class. Generate SQL query with 
+ORDER BY and WHERE clauser from ordering and filters.
+
+
+=head2 check
+
+B<check> is overwritten method from parent class. Check definition from the 
+class point of view. Add checking of filter and ordering directive.

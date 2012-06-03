@@ -3,6 +3,7 @@ package Mojolicious::Cafe::List;
 use Mojo::Base 'Mojolicious::Cafe::Base';
 use DBD::Pg qw(:pg_types);
 use Scalar::Util qw(looks_like_number);
+use Mojolicious::Cafe::SQL::Query;
 use Encode;
 
 
@@ -41,7 +42,7 @@ sub check {
 sub load {
 	my ($self, $force) = @_;
 	if ( ! $self->loaded || $force ) {
-		$self->c->app->log->debug("Query:\n" . $self->query_compiled);
+		$self->c->app->log->debug("Query:\n" . $self->query->pretty );
 		my $sth = $self->dbh->prepare($self->query_compiled);
 		$sth->execute($self->query_params());
 		$self->list($sth->fetchall_arrayref({}));
@@ -73,7 +74,10 @@ sub list {
 #Getter for query
 sub query {
 	my $self = shift;
-	return($self->definition->{query});
+	if ( ! $self->{_query} ) {
+		$self->{_query} = Mojolicious::Cafe::SQL::Query->new($self->definition->{query});
+	}
+	return($self->{_query});
 }
 #}}}
 #{{{ push
@@ -159,33 +163,22 @@ sub search {
 sub query_compiled {
 	my $self = shift;
 
-	#Convert to anonymous placeholders
-	my $query = $self->query;
-	$query =~ s/@\w+/?/g;
-
 	#Add limit and offset
 	if ( defined($self->limit) && looks_like_number($self->limit) ) {
-		$query =~ s/LIMIT\s+\d+//i;
-		$query =~ s/OFFSET\s+\d+//i;
-		$query = join(' ', $query, "LIMIT", $self->limit);
-		$query = join(' ', $query, "OFFSET", $self->offset) if ( defined($self->offset) && looks_like_number($self->offset) );
+		my $limit_clause = $self->limit;
+		$limit_clause = join(' ', $self->limit, "OFFSET", $self->offset) if ( defined($self->offset) && looks_like_number($self->offset) );
+		$self->query->limit_clause($limit_clause);
 
 	}
-	return($query);
+	return($self->query->placeholdered);
 }
 #}}}
 #{{{ private query_params
 #Prepare params for compiled query 
 sub query_params {
 	my $self = shift;
-	my @params;
-	my $query = $self->query;	
-	while ( $query =~ s/@(\w+)/?/ ) {
-		my $param;
-		$param = $self->$1;
-		CORE::push(@params, $self->$1);
-	}
-	$self->c->app->log->debug("Query parameters: " . join(', ', map { qq("$_") } @params) . ".") if ( scalar(@params) ); 
+	my @params = map { $self->$_ } $self->query->parameters;	
+	$self->c->app->log->debug("Query parameters: " . join(', ', map { (defined($_) ? qq("$_") : "NULL") } @params) . ".") if ( scalar(@params) ); 
 	return(@params);
 }
 #}}}
