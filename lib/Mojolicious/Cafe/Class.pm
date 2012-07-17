@@ -125,13 +125,15 @@ sub save {
 			$self->statestamp($self->c->cnow);
 		}
 
-		#Set state bits 
+		#Set state bits (setup insert/update bits and remove delete bits
+		#Remove delete bits, because if user can save some record, user
+		#want see the record in the future
 		if ( $self->definition->{columns}->{state} ) {
 			$self->state(0) unless ( defined($self->state) );
 			if ( ( ($self->state & 1) == 0 ) ) {
-				$self->state($self->state | 1);
+				$self->state(($self->state | 1) & (~4));
 			} else {
-				$self->state($self->state | 2);
+				$self->state(($self->state | 2) & (~4));
 			}
 		}
 

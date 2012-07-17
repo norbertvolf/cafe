@@ -1,3 +1,11 @@
+libcafe-application-perl (0.8.44-1) stable; urgency=low
+
+   * Disable preparation without parameters
+   * Add SQL query execution time in debug mode
+   * Remove obsolete dependeces from debian package
+
+ -- Norbert Volf <norbert@volf.eu>  Mon,  17 Jul 2012 19:29:00 +0200
+
 libcafe-application-perl (0.8.43-1) stable; urgency=low
 
    * add SQL parser to define default clause

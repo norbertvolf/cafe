@@ -9,5 +9,5 @@ Homepage: http://search.cpan.org/dist/Cafe-Application/
 
 Package: libcafe-application-perl
 Architecture: all
-Depends: ${perl:Depends}, ${misc:Depends}, libapache2-request-perl, libjson-xs-perl, libapache2-mod-perl2, libcache-memcached-perl, libproc-pid-file-perl, libdbi-perl, libapache-session-perl, libdbd-pg-perl, libtemplate-perl, libapache-configfile-perl, librpc-xml-perl, libtext-iconv-perl, libwww-perl, libintl-perl, libapache-htpasswd-perl, nginx, libmojolicious-perl, libdatetime-locale-perl, libdatetime-perl, libdatetime-timezone-perl, memcached, libfile-type-perl, libvalidation-class-perl
+Depends: ${perl:Depends}, ${misc:Depends}, libcache-memcached-perl, libproc-pid-file-perl, libdbi-perl, libdbd-pg-perl, libintl-perl, libapache-htpasswd-perl, nginx, libmojolicious-perl, libdatetime-locale-perl, libdatetime-perl, libdatetime-timezone-perl, memcached, libfile-type-perl, libvalidation-class-perl
 Description: Web framework based on Mojolicious and linked with PostgreSQL database

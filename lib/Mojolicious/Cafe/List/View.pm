@@ -86,7 +86,6 @@ sub validate {
 		@{$params}{keys %columns} = values %columns;
 		
 	}
-
 	my $retval = $self->SUPER::validate($params);
 	return($retval);
 }

@@ -5,6 +5,7 @@ use DBD::Pg qw(:pg_types);
 use Scalar::Util qw(looks_like_number);
 use Mojolicious::Cafe::SQL::Query;
 use Encode;
+use DateTime;
 
 
 has 'limit';
@@ -42,11 +43,18 @@ sub check {
 sub load {
 	my ($self, $force) = @_;
 	if ( ! $self->loaded || $force ) {
-		$self->c->app->log->debug("Query:\n" . $self->query->pretty );
-		my $sth = $self->dbh->prepare($self->query_compiled);
+		$self->c->app->log->debug( ref($self) . " query:\n" . $self->query->pretty );
+		my $sth = $self->dbh->prepare($self->query_compiled, { pg_server_prepare => 0 });
+		my $start;
+		if ( $self->c->app->mode eq 'development' ) {
+			$start = Time::HiRes::gettimeofday();
+		}
 		$sth->execute($self->query_params());
+		if ( $self->c->app->mode eq 'development' ) {
+			my $end = Time::HiRes::gettimeofday();
+			$self->c->app->log->debug("Execution time(seconds) : " . sprintf("%.5f\n", $end - $start));
+		}
 		$self->list($sth->fetchall_arrayref({}));
-
 		#Normalize rows
 		foreach my $r ( $self->list ) {
 			#Convert timestamp from databaze to Datetime
