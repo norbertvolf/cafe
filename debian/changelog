@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.45-1) stable; urgency=low
+
+   * Use LANGUAGE enviroment variable to set locale also
+
+ -- Norbert Volf <norbert@volf.eu>  Mon,  18 Jul 2012 14:55:00 +0200
+
 libcafe-application-perl (0.8.44-1) stable; urgency=low
 
    * Disable preparation without parameters

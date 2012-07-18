@@ -8,9 +8,6 @@ use Encode;
 sub register {
 	my ($self, $app) = @_;
 
-	textdomain("caramel");
-	bindtextdomain(caramel => join("/", $app->home->to_string, "locale"));
-
 	$app->helper(
 		__ => sub {
 			my $c = shift; 

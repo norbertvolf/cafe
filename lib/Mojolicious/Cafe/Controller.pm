@@ -109,6 +109,7 @@ sub restore_locale {
 		my $locale = pop( @{ $self->{_local_locale} } );
 		if ($locale) {
 			$ENV{LANG} = $locale;    #For TextDomain we mu set LANG also
+			$ENV{LANGUAGE} = $locale;    #For TextDomain we mu set LANG also
 			setlocale( LC_ALL, $locale );
 			my $foo = setlocale(LC_ALL);
 		}
@@ -147,6 +148,7 @@ sub set_locale {
 	#Set new locale
 	$locale = "C" unless ($locale);
 	$ENV{LANG} = $locale;    #For TextDomain we mu set LANG also
+	$ENV{LANGUAGE} = $locale;    #For TextDomain we mu set LANG also
 	setlocale( LC_ALL, $locale );
 
 	#Keep previous locale for reset
