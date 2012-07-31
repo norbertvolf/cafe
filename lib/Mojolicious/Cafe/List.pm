@@ -43,7 +43,7 @@ sub check {
 sub load {
 	my ($self, $force) = @_;
 	if ( ! $self->loaded || $force ) {
-		$self->c->app->log->debug( ref($self) . " query:\n" . $self->query->pretty );
+		$self->c->app->log->debug("Query (" . ref($self) . "):\n" . $self->query->pretty("\t") );
 		my $sth = $self->dbh->prepare($self->query_compiled, { pg_server_prepare => 0 });
 		my $start;
 		if ( $self->c->app->mode eq 'development' ) {
@@ -52,7 +52,7 @@ sub load {
 		$sth->execute($self->query_params());
 		if ( $self->c->app->mode eq 'development' ) {
 			my $end = Time::HiRes::gettimeofday();
-			$self->c->app->log->debug("Execution time(seconds) : " . sprintf("%.5f\n", $end - $start));
+			$self->c->app->log->debug("Execution time: " . sprintf("%.2f ms (" . ref($self) . ")\n", ($end - $start) * 1000 ));
 		}
 		$self->list($sth->fetchall_arrayref({}));
 		#Normalize rows
