@@ -70,26 +70,27 @@ sub fullfeatured {
 #Return formatted query
 sub pretty {
 	my $self = shift;
+	my $indent = shift // "";
 	#Generate query from clauses
 	my @query;
-	push(@query, 'SELECT', $self->columns);
+	push(@query, $indent . "SELECT", $self->columns);
 
 	my $from_clause = $self->from_clause;
-	$from_clause =~ s/(LEFT JOIN|RIGHT JOIN|CROSS JOIN|INNER JOIN|JOIN)/\n\t\t$1/g;
-	push(@query, "\n\tFROM",  $from_clause);
+	$from_clause =~ s/(LEFT JOIN|RIGHT JOIN|CROSS JOIN|INNER JOIN|JOIN)/\n$indent\t\t$1/g;
+	push(@query, "\n$indent\tFROM",  $from_clause);
 	if ( $self->where_clause ) {
 		my $where_clause = $self->where_clause;
-		$where_clause =~ s/(AND)/\n\t\t$1/g;
-		push(@query, "\n\tWHERE", $where_clause );
+		$where_clause =~ s/(AND)/\n$indent\t\t$1/g;
+		push(@query, "\n$indent\tWHERE", $where_clause );
 	}
 	if ( $self->groupby_clause ) {
-		push(@query, "\n\tGROUP BY", $self->groupby_clause, ) 
+		push(@query, "\n$indent\tGROUP BY", $self->groupby_clause, ) 
 	}
 	if ( $self->orderby_clause ) {
-		push(@query, "\n\tORDER BY", $self->orderby_clause, );
+		push(@query, "\n$indent\tORDER BY", $self->orderby_clause, );
 	}
 	if ( $self->limit_clause ) {
-		push(@query, "\n\tLIMIT", $self->limit_clause, );
+		push(@query, "\n$indent\tLIMIT", $self->limit_clause, );
 	}
 	return(join(' ', @query));
 }
