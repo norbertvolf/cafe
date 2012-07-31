@@ -3,6 +3,7 @@ package Mojolicious::Cafe::Base;
 use Mojo::Base -base;
 use Validation::Class::Simple;
 use DateTime;
+use Scalar::Util qw(weaken);
 
 has loaded  => 0;
 has okay    => 0;
@@ -18,6 +19,9 @@ sub new {
 	my $c     = shift;
 	my $def   = shift;
 	my $self  = $class->SUPER::new();
+
+	#Weaken reference to prevent memory leaks
+	weaken($c);
 
 	$self->c($c);
 
@@ -157,7 +161,7 @@ sub errors {
 				{
 					label => $self->definition->{columns}->{$key}->{label} // $key,
 					error => $self->definition->{columns}->{$key}->{error}
-					  // ( $self->c->__('Invalid') . $self->definition->{columns}->{$key}->{label} . $self->c->__('field') ),
+					  // sprintf( $self->c->__('Invalid %s field'), $self->definition->{columns}->{$key}->{label} // $key ),
 					key => $key,
 				}
 			);
