@@ -1,3 +1,11 @@
+libcafe-application-perl (0.8.46-1) stable; urgency=low
+
+   * copy content of filter (not just reference) during filter column preparation
+   * add array type parameter capability
+   * remove validator persistence
+
+ -- Norbert Volf <norbert@volf.eu>  Thu,  02 Aug 2012 08:10:00 +0200
+
 libcafe-application-perl (0.8.45-1) stable; urgency=low
 
    * Use LANGUAGE enviroment variable to set locale also

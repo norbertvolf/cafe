@@ -15,9 +15,6 @@ sub startup {
 	#See helpers provided in plugin in in POD and source code
 	$self->plugin('Mojolicious::Cafe::Plugin::DateTime');
 
-	#Use static root on www instead of public
-	$self->app->static->paths([join "/", $self->app->home->to_string, "www"]);
-
 	#Make sessions valid to end of user session
 	$self->sessions->default_expiration(0);
 
