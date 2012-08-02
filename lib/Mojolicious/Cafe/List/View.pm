@@ -72,7 +72,12 @@ sub validate {
 			#If filter key exists in definition create item for WHERE clause
 			if ( ref($params->{filters}->{$key}) eq 'HASH'  &&  exists($self->definition->{filters}) && exists($self->definition->{filters}->{$key}) ) {
 				if ( exists($self->definition->{filters}->{$key}->{column} )  ) {
-					$columns{$self->definition->{filters}->{$key}->{column}} = $params->{filters}->{$key}->{value};
+					if ( ref($params->{filters}->{$key}->{value}) eq 'ARRAY' ) {
+						#Copy filter value to remove circular references (workaround for Hash::Flattenet in validator)
+						$columns{$self->definition->{filters}->{$key}->{column}} = [ map { $_ } @{$params->{filters}->{$key}->{value}} ];
+					} else {
+						$columns{$self->definition->{filters}->{$key}->{column}} = $params->{filters}->{$key}->{value};
+					}
 				}
 				$filters{$key} = $self->definition->{filters}->{$key};
 			} elsif ( ref($params->{filters}->{$key}) eq 'HASH'  &&  ! exists($self->definition->{filters}->{$key}) ) {
