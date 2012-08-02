@@ -189,7 +189,6 @@ sub validate {
 		#Validate all columns with directive rule
 		if ( exists( $columns->{$key} ) && ref( $columns->{$key} ) eq 'HASH' && $self->definition->{columns}->{$key}->{rule} ) {
 			if ( $self->validator->validate($key) ) {
-
 				#Copy value to instance of class by setter
 				if ( $columns->{$key}->{type} == $self->c->DB_DATE ) {
 					$self->$key( $self->func_parse_date( $params->{$key} ) );
@@ -224,11 +223,8 @@ sub validate {
 #Create, memoize and return validator for actual class
 sub validator {
 	my $self = shift;
-
-	#Is validator memoized
-	if ( !$self->c->app->validator( ref($self) ) ) {
-
-		#Create validator and memoize it to App
+	#Create validators
+	if ( ! $self->{_validators} ) {
 		my %fields;
 		my %columns = %{ $self->definition->{columns} };
 		foreach my $key ( keys(%columns) ) {
@@ -246,6 +242,9 @@ sub validator {
 				elsif ( $columns{$key}->{type} == $self->c->DB_NUMERIC ) {
 					$columns{$key}->{pattern} = qr/^\d+[.,]{0,1}\d*$/ if ( !$columns{$key}->{pattern} );
 				}
+				elsif ( $columns{$key}->{type} == $self->c->DB_ARRAY ) {
+					$columns{$key}->{validation} = func_validate_array() if ( !$columns{$key}->{validation} );
+				}
 
 				#Copy permitted directives to Validatioin::Class definition
 				foreach my $directive ( 'pattern', 'required', 'label', 'error', 'errors', 'validation', 'max_length', 'filters' ) {
@@ -253,11 +252,9 @@ sub validator {
 				}
 			}
 		}
-
-		#Create and memoize validator
-		$self->c->app->validator( ref($self), Validation::Class::Simple->new( fields => \%fields ) );
+		$self->{_validators}  = Validation::Class::Simple->new( fields => \%fields );
 	}
-	return ( $self->c->app->validator( ref($self) ) );
+	return ( $self->{_validators} );
 }
 
 #}}}
@@ -483,6 +480,23 @@ sub func_parse_pg_date {
 		Mojo::Exception->throw("Bad postgresql date format");
 	}
 	return ($date);
+}
+
+#}}}
+#{{{protected func_validate_array
+#Validate array passed as parameter
+sub func_validate_array {
+	my $retval = sub {
+		my ( $self, $this_field, $all_params ) = @_;
+
+		if ( ref( $this_field->{value} ) eq 'ARRAY' ) {
+			return (1);
+		}
+		else {
+			return 0;    # Not a array
+		}
+	};
+	return ($retval);
 }
 
 #}}}
