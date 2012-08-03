@@ -186,9 +186,10 @@ sub validate {
 	$self->validator->set_params_hash($params);
 	foreach my $key ( keys( %{$params} ) ) {
 
-		#Validate all columns with directive rule
-		if ( exists( $columns->{$key} ) && ref( $columns->{$key} ) eq 'HASH' && $self->definition->{columns}->{$key}->{rule} ) {
+		#Validate all simple columns with directive rule
+		if ( exists( $columns->{$key} ) && ref( $columns->{$key} ) eq 'HASH' && $columns->{$key}->{type} != $self->c->DB_ARRAY && $self->definition->{columns}->{$key}->{rule} ) {
 			if ( $self->validator->validate($key) ) {
+
 				#Copy value to instance of class by setter
 				if ( $columns->{$key}->{type} == $self->c->DB_DATE ) {
 					$self->$key( $self->func_parse_date( $params->{$key} ) );
@@ -202,15 +203,15 @@ sub validate {
 				else {
 					$self->$key( $params->{$key} );
 				}
-			}
-			else {
+			} else {
 
 				#Set error value
 				$columns->{$key}->{invalid} = 1;
 				$errors++;
 			}
-		}
-		elsif ( exists( $columns->{$key} ) && ref( $columns->{$key} ) eq 'HASH' && !$self->definition->{columns}->{$key}->{rule} ) {
+		} elsif ( exists( $columns->{$key} ) && ref( $columns->{$key} ) eq 'HASH' && $columns->{$key}->{type} == $self->c->DB_ARRAY && $self->definition->{columns}->{$key}->{rule}  ) {
+			$self->$key( $params->{$key} );
+		} elsif ( exists( $columns->{$key} ) && ref( $columns->{$key} ) eq 'HASH' && !$self->definition->{columns}->{$key}->{rule} ) {
 			$self->c->app->log->debug(qq(You have tried validate key "$key" without rule parameter in definition !!!));
 		}
 	}
@@ -223,10 +224,17 @@ sub validate {
 #Create, memoize and return validator for actual class
 sub validator {
 	my $self = shift;
+
 	#Create validators
-	if ( ! $self->{_validators} ) {
-		my %fields;
-		my %columns = %{ $self->definition->{columns} };
+	my %fields;
+
+	#Set up validators for simple type columns (ignory array type)
+	my %columns =
+	  map { $_ => $self->definition->{columns}->{$_} }
+	  grep { $self->definition->{columns}->{$_}->{type} != $self->c->DB_ARRAY } keys( %{ $self->definition->{columns} } );
+
+	#Is validator memoized
+	if ( !$self->c->app->validator( ref($self) ) ) {
 		foreach my $key ( keys(%columns) ) {
 			if ( $columns{$key}->{rule} ) {
 
@@ -242,9 +250,6 @@ sub validator {
 				elsif ( $columns{$key}->{type} == $self->c->DB_NUMERIC ) {
 					$columns{$key}->{pattern} = qr/^\d+[.,]{0,1}\d*$/ if ( !$columns{$key}->{pattern} );
 				}
-				elsif ( $columns{$key}->{type} == $self->c->DB_ARRAY ) {
-					$columns{$key}->{validation} = func_validate_array() if ( !$columns{$key}->{validation} );
-				}
 
 				#Copy permitted directives to Validatioin::Class definition
 				foreach my $directive ( 'pattern', 'required', 'label', 'error', 'errors', 'validation', 'max_length', 'filters' ) {
@@ -252,9 +257,9 @@ sub validator {
 				}
 			}
 		}
-		$self->{_validators}  = Validation::Class::Simple->new( fields => \%fields );
+		$self->c->app->validator( ref($self), Validation::Class::Simple->new( fields => \%fields ) );
 	}
-	return ( $self->{_validators} );
+	return ( $self->c->app->validator( ref($self) ) );
 }
 
 #}}}
