@@ -174,6 +174,12 @@ sub tmp {
 	return($self->c->tmp->{ref($self)});
 }
 #}}}
+#{{{ filters
+#Return actually used filters 
+sub filters {
+	return(shift->{_filters});
+}
+#}}}
 
 1;
 

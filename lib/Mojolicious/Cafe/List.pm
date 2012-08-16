@@ -164,6 +164,32 @@ sub search {
 	return(@arr);
 }
 #}}}
+#{{{ count
+#Compute and return number of rows
+sub count {
+	my ($self, $force) = @_;
+	if ( ! exists($self->{_count}) || $force ) {
+		$self->c->app->log->debug("Counter (" . ref($self) . "):\n" . $self->query->counter_pretty("\t") );
+		my $sth = $self->dbh->prepare($self->query->counter_placeholdered, { pg_server_prepare => 0 });
+		my $start;
+		if ( $self->c->app->mode eq 'development' ) {
+			$start = Time::HiRes::gettimeofday();
+		}
+		$sth->execute($self->counter_params());
+		if ( $self->c->app->mode eq 'development' ) {
+			my $end = Time::HiRes::gettimeofday();
+			$self->c->app->log->debug("Execution time: " . sprintf("%.2f ms (" . ref($self) . ")\n", ($end - $start) * 1000 ));
+		}
+		my $arr = $sth->fetchall_arrayref([0]);
+		if ( scalar(@{$arr}) ) {
+			$self->{_count} = $arr->[0]->[0];
+		} else {
+			Mojo::Exception->throw("There is no counter value.");
+		}
+	}
+	return($self->{_count});
+}
+#}}}
 
 #{{{ private query_compiled
 #Remove parameters and dynamically used SQL keywords
@@ -187,6 +213,15 @@ sub query_params {
 	my $self = shift;
 	my @params = map { $self->$_ } $self->query->parameters;	
 	$self->c->app->log->debug("Query parameters: " . join(', ', map { (defined($_) ? qq("$_") : "NULL") } @params) . ".") if ( scalar(@params) ); 
+	return(@params);
+}
+#}}}
+#{{{ private counter_params
+#Prepare params for compiled query 
+sub counter_params {
+	my $self = shift;
+	my @params = map { $self->$_ } $self->query->counter_parameters;	
+	$self->c->app->log->debug("Counter parameters: " . join(', ', map { (defined($_) ? qq("$_") : "NULL") } @params) . ".") if ( scalar(@params) ); 
 	return(@params);
 }
 #}}}
