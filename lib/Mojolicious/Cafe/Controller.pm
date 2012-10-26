@@ -5,91 +5,20 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::Exception;
 use DBI;
 use Cache::Memcached;
-use Schema::User;
 use POSIX qw(strftime locale_h setlocale LC_ALL);
 
 #tmp hash to keep tmp data in session (in user you can keep data per user)
 #see after_dispatch and before_dispatch hook in Mojolicious::Cafe
 has 'tmp' => sub { return ( {} ) };
 
-#{{{ vhost
-#Return actual served host
-sub vhost {
-	my $self = shift;
-	if ( !$self->{_vhost} ) {
-
-		#TODO implementuj vhost aliases
-		$self->{_vhost} = $self->req->url->base->host;
-	}
-	return ( $self->{_vhost} );
-}
-
-#}}}
-#{{{ config
-#Return hash with configuration or
-#return value if configuration parameter
-#name is passed
-sub config {
-	my $self = shift;
-
-	Mojo::Exception->throw( "There is no configuration for '" . $self->vhost . "'" )
-	  if ( !exists( $self->app->vconfig->{ $self->vhost } ) );
-	if ( scalar(@_) ) {
-		return ( $self->app->vconfig->{ $self->vhost }->{ shift() } );
-	}
-	else {
-		return ( $self->app->vconfig->{ $self->vhost } );
-	}
-}
-
-#}}}
 #{{{ dbh
 #Return instance of DBI class. The class
 #is used as interface between database
 #and Caramel application. The instance
 #is created per vhost.
 sub dbh {
-	my $self = shift;
-	my %params = @_ if ( scalar(@_) && ( scalar(@_) % 2 ) == 0 );
-
-	if ( !exists( $self->config->{_dbh} ) ) {
-		$self->app->log->warn("Connecting to database...");
-		$self->config->{_dbh} =
-		  DBI->connect( $self->config->{dbi_dsn}, $self->config->{dbi_user}, $self->config->{dbi_pass}, $self->config->{dbi_attr} );
-	}
-	else {
-		my $ping = $self->config->{_dbh}->ping;
-		if ( !$ping ) {
-			$self->app->log->warn("Database connection has disconnected. Trying to reconnect...");
-			$self->config->{_dbh}->disconnect;
-			$self->config->{_dbh} =
-			  DBI->connect( $self->config->{dbi_dsn}, $self->config->{dbi_user}, $self->config->{dbi_pass}, $self->config->{dbi_attr} );
-		}
-		elsif ( $params{check} && $ping > 1 ) {
-			$self->app->log->warn('Database connection is dirty. Cleanup..');
-			$self->config->{_dbh}->disconnect;
-			$self->config->{_dbh} =
-			  DBI->connect( $self->config->{dbi_dsn}, $self->config->{dbi_user}, $self->config->{dbi_pass}, $self->config->{dbi_attr} );
-		}
-	}
-	return ( $self->config->{_dbh} );
+	return ( shift->app->dbh(@_) );
 }
-
-#}}}
-#{{{  memd
-#Return instance of Cache::Memcached class
-#The class encapsulates client API  for
-#memcached. The instance created is per
-#vhost.
-sub memd {
-	my $self = shift;
-	if ( !$self->config->{_memd} ) {
-		$self->config->{memcached}->{namespace} = $self->vhost if ( !$self->config->{memcached}->{namespace} );
-		$self->config->{_memd} = new Cache::Memcached( $self->config->{memcached} );
-	}
-	return ( $self->config->{_memd} );
-}
-
 #}}}
 #{{{ restore_locale
 
