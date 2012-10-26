@@ -23,14 +23,16 @@ sub register {
 				my $username;
 				my $class =  $c->config->{user_class};
 				eval {require $class};
+				Mojo::Exception->throw($@) if $@;
 
 				if ( $c->session->{digest} ) {
 					$username = $c->memd->get(join("|", "user_digest", $c->session->{digest}));
 					eval("\$c->{_user} = new $class(\$c, \$username)");
+					Mojo::Exception->throw($@) if $@;
 				} else {
 					eval("\$c->{_user} = new $class(\$c )");
+					Mojo::Exception->throw($@) if $@;
 				}
-				Mojo::Exception->throw($@) if $@;
 			}
 			return($c->{_user});
 		}
