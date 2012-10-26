@@ -1,16 +1,20 @@
 #/usr/bin/perl -T
 
-use Test::More tests => 7;
+use Test::More tests => 11;
 
 BEGIN {
-#	use_ok( 'Cafe::Application' );
-	use_ok( 'Cafe::Base' );
-	use_ok( 'Cafe::Class' );
-	use_ok( 'Cafe::Filters' );
-	use_ok( 'Cafe::Listing' );
-	use_ok( 'Cafe::NamedQuery' );
-	use_ok( 'Cafe::Path' );
-	use_ok( 'Cafe::Script' );
+	use_ok('Mojolicious::Cafe::Base');
+	use_ok('Mojolicious::Cafe::Base');
+	use_ok('Mojolicious::Cafe::Class::Versioned');
+	use_ok('Mojolicious::Cafe::Class');
+	use_ok('Mojolicious::Cafe::Controller');
+	use_ok('Mojolicious::Cafe::List::View');
+	use_ok('Mojolicious::Cafe::List');
+	use_ok('Mojolicious::Cafe::Plugin::Locale::Messages');
+	use_ok('Mojolicious::Cafe::Plugin::DateTime');
+	use_ok('Mojolicious::Cafe::Plugin::CAuth');
+	use_ok('Mojolicious::Cafe::SQL::Query');
+
 }
 
-diag( "Testing Cafe::Application $Cafe::Application::VERSION, Perl $], $^X" );
+diag("Testing Mojolicious::Cafe, Perl $], $^X");
