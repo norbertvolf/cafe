@@ -32,6 +32,10 @@ sub check {
 			},
 		};
 	};
+
+	#You cant use column named as hash, because there is method named 'hash'
+	Mojo::Exception->throw("You cant use column named as hash, because there is method named 'hash'")  if ( exists($def->{columns}->{hash}) );
+
 	$self->SUPER::check($def);
 
 	return($def);
@@ -116,7 +120,7 @@ sub save {
 	#no change attributes via class hash directly !!!!!!!!! or you
 	#must know what happened
 	if ( $self->changed ) {
-		if ( exists($self->definition->{columns}->{stateuser}) && $self->c->user) {
+		if ( $self->c->config->{user_class} && exists($self->definition->{columns}->{stateuser}) && $self->c->user) {
 			$self->stateuser(defined($self->c->user->iduser) ? $self->c->user->iduser : 0);
 		}
 
