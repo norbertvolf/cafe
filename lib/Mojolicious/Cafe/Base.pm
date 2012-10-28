@@ -248,7 +248,7 @@ sub validator {
 					$columns{$key}->{pattern} = qr/^\d+$/ if ( !$columns{$key}->{pattern} );
 				}
 				elsif ( $columns{$key}->{type} == $self->c->DB_NUMERIC ) {
-					$columns{$key}->{pattern} = qr/^\d+[.,]{0,1}\d*$/ if ( !$columns{$key}->{pattern} );
+					$columns{$key}->{pattern} = qr/^[+-]{0,1}\d+[.,]{0,1}\d*$/ if ( !$columns{$key}->{pattern} );
 				}
 
 				#Copy permitted directives to Validatioin::Class definition
