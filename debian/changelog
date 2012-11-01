@@ -1,3 +1,9 @@
+libcafe-application-perl (0.8.50-1) stable; urgency=low
+
+   * enable sign character in DB_NUMERIC validator
+
+ -- Norbert Volf <norbert@volf.eu>  Thu,  01 Nov 2012 20:18:00 +0100
+
 libcafe-application-perl (0.8.49-1) stable; urgency=low
 
    * remove SMS test driver
