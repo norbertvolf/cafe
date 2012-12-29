@@ -48,7 +48,6 @@ sub check {    #Check definiton, passed as paramaters
 	  if ( !( ref( $def->{columns} ) eq 'HASH' ) );
 
 	for ( keys( %{ $def->{columns} } ) ) {
-		$self->c->app->log->debug( ref( $def->{columns}->{$_} ) eq 'HASH', $_ );
 		Mojo::Exception->throw("Error in class " . ref($self). ". Column '$_' definitions must be HASH.\n\n" . $self->c->app->dumper( $def->{columns} ) )
 		  if ( !( ref( $def->{columns}->{$_} ) eq 'HASH' ) );
 	}
