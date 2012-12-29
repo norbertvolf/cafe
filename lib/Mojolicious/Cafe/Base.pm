@@ -43,7 +43,16 @@ sub check {    #Check definiton, passed as paramaters
 	my $def  = shift;
 
 	#Is $definition present
-	Mojo::Exception->throw("Definition is not pass as parameter.") if ( !defined($def) );
+	Mojo::Exception->throw("Error in class " . ref($self). ". Definition is not pass as parameter.") if ( !defined($def) );
+	Mojo::Exception->throw("Error in class " . ref($self). ". Columns definitions must be HASH.\n\n" . $self->c->app->dumper($def) )
+	  if ( !( ref( $def->{columns} ) eq 'HASH' ) );
+
+	for ( keys( %{ $def->{columns} } ) ) {
+		$self->c->app->log->debug( ref( $def->{columns}->{$_} ) eq 'HASH', $_ );
+		Mojo::Exception->throw("Error in class " . ref($self). ". Column '$_' definitions must be HASH.\n\n" . $self->c->app->dumper( $def->{columns} ) )
+		  if ( !( ref( $def->{columns}->{$_} ) eq 'HASH' ) );
+	}
+
 	return ($def);
 }
 
@@ -75,11 +84,11 @@ sub dump {       #Return string with dumped data
 	);
 }
 
-sub root {     #Return root class for back compatibility root class is  controller now (property *c*)
+sub root {    #Return root class for back compatibility root class is  controller now (property *c*)
 	return ( shift->c );
 }
 
-sub hash {     #Returns formated values by hash based on definition of columns
+sub hash {    #Returns formated values by hash based on definition of columns
 	my $self = shift;
 	my $data = {};
 
