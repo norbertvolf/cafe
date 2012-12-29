@@ -182,6 +182,8 @@ sub ordering {    #Ordering setter generate dynamic ORDER BY clause
 			}
 		}
 		$self->{_ordering} = \@ordering;
+	} else {
+		$self->c->app->log->error( 'You have not send ordering request as array' . ref($self) . '.' );
 	}
 }
 
@@ -236,6 +238,16 @@ B<validate> is based on parent validate method and try to validate ordering,
 filters, limit and offset parameters. Default values are difined by constants 
 DEFAULT_LIMIT and DEFAULT_OFFSET.
 
+	$self->validate(
+		{
+			limit   => 1,
+			filters => { idcontenttype => { value => 8 }, }
+			ordering => [
+				{ key => 'statestamp', how => 'desc' },
+			]
+		}
+	);     
+
 =head2 ordering
 
 B<ordering> is used to set ordering 
@@ -244,7 +256,6 @@ B<ordering> is used to set ordering
 
 B<query> is overwritten method from parent class. Generate SQL query with 
 ORDER BY and WHERE clauser from ordering and filters.
-
 
 =head2 check
 
