@@ -42,6 +42,7 @@ WriteMakefile(
 		'Sys::Syslog' => 0,
 		'Template' => 0,
 		'Text::Iconv' => 0,
+		'Datetime' => 0,
 	},
 	dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
 	clean               => { FILES => 'Cafe-*' },
