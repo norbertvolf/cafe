@@ -36,6 +36,7 @@ sub check {    #Check definiton, passed as paramaters
 
 sub load {     #Load persistent data from databases by query defined in class.
 	my ( $self, $force ) = @_;
+	my $time;
 	if ( !$self->loaded || $force ) {
 		$self->c->app->log->debug( "Query (" . ref($self) . "):\n" . $self->query->pretty("\t") );
 		my $sth = $self->dbh->prepare( $self->query_compiled, { pg_server_prepare => 0 } );
@@ -46,9 +47,12 @@ sub load {     #Load persistent data from databases by query defined in class.
 		$sth->execute( $self->query_params() );
 		if ( $self->c->app->mode eq 'development' ) {
 			my $end = Time::HiRes::gettimeofday();
-			$self->c->app->log->debug( "Execution time: " . sprintf( "%.2f ms (" . ref($self) . ")\n", ( $end - $start ) * 1000 ) );
+			$time = "Execution time: " . sprintf( "%.3f ms (" . ref($self) . ")", ( $end - $start ) * 1000 );
 		}
 		$self->list( $sth->fetchall_arrayref( {} ) );
+		if ( $self->c->app->mode eq 'development' ) {
+			$self->c->app->log->debug("Rows: " . scalar(@{$self->list}) . " $time");
+		}
 
 		#Normalize rows
 		foreach my $r ( $self->list ) {
