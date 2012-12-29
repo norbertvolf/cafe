@@ -12,9 +12,7 @@ sub register {
 		__ => sub {
 			my $c = shift; 
 			my $msgid = shift;
-			$c->set_locale($c->user->locale);
 			my $retval = decode('utf-8', gettext($msgid));
-			$c->restore_locale($c->user->locale);
 			return($retval);
 		}
 	);
