@@ -12,7 +12,6 @@ sub startup {
 	#Setup plugins
 	$self->plugin('Mojolicious::Cafe::Plugin::Locale::Messages');
 	$self->plugin('Mojolicious::Cafe::Plugin::DateTime');
-	#$self->plugin('Mojolicious::Cafe::Plugin::CAuth');
 	
 
 	#Make sessions valid to end of user session
@@ -25,12 +24,6 @@ sub startup {
 		my $c = shift;
 		#Check database connection
 		$c->dbh(check => 1);
-		#Fetch session hash from Memcache
-		if ( defined($c->session->{_sessionid}) ) {
-			$c->tmp($c->memd->get(join("|", "sessionid", $c->session->{_sessionid})) // {});
-		} else {
-			$c->session->{_sessionid} = sha1_base64(join("",  rand(), $c->config->{secret} // ''));
-		}
 	});
 	$self->hook(after_dispatch => sub {
 		my $c = shift;
@@ -38,8 +31,6 @@ sub startup {
 		$c->dbh(check => 1);
 		#Workaround about forgot transactions. Fire query to force transaction
 		$c->dbh->do("SELECT 'Keep alive connection'");
-		#Save tmp hash to memcache
-		$c->memd->set(join("|", "sessionid", $c->session->{_sessionid}), $c->tmp);
 	});
 
 }
