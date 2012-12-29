@@ -12,9 +12,7 @@ has changed => 0;    #If somenody change any attribute via getter/setter change 
 has 'definition';
 has 'c';
 
-#{{{ new
-#Create new instance of Cafe::Mojo::Class
-sub new {
+sub new {            #Create new instance of Cafe::Mojo::Class
 	my $class = shift;
 	my $c     = shift;
 	my $def   = shift;
@@ -40,10 +38,7 @@ sub new {
 	return ($self);
 }
 
-#}}}
-#{{{check
-#Check definiton, passed as paramaters
-sub check {
+sub check {    #Check definiton, passed as paramaters
 	my $self = shift;
 	my $def  = shift;
 
@@ -52,10 +47,7 @@ sub check {
 	return ($def);
 }
 
-#}}}
-#{{{columns
-#Return sorted (by pos) columns as array
-sub columns {
+sub columns {    #Return sorted (by pos) columns as array
 	my $self = shift;
 	my $def = scalar(@_) ? shift : $self->definition;
 	my @columns =
@@ -64,51 +56,30 @@ sub columns {
 	return ( wantarray ? @columns : \@columns );
 }
 
-#}}}
-#{{{dbh
-#Return dbh from definition
-sub dbh { return ( shift->definition->{dbh} ); }
+sub dbh {        #Return dbh from definition
+	return ( shift->definition->{dbh} );
+}
 
-#}}}
-#{{{ dump
-#Return string with dumped data
-sub dump {
+sub dump {       #Return string with dumped data
 	my $self = shift;
 	return (
 		ref($self) . "::dump = \n{\n  " . join(
 			"\n  ",
 			map {
 				eval { "$_ => " . ( $self->$_ // '' ) }
-			  } map { $_->{key} } $self->columns
+			  } map {
+				$_->{key}
+			  } $self->columns
 		  )
 		  . "\n};"
 	);
 }
 
-#}}}
-#{{{ debug
-#Print debug info to log
-sub debug {
-	my $self = shift;
-	if ( scalar(@_) ) {
-		$self->c->app->log->debug( $self->c->app->dumper(@_) );
-	}
-	else {
-		$self->c->app->log->debug( $self->dump() );
-	}
-}
-
-#}}}
-#{{{ root
-#Return root class for back compatibility root class is  controller now (property *c*)
-sub root {
+sub root {     #Return root class for back compatibility root class is  controller now (property *c*)
 	return ( shift->c );
 }
 
-#}}}
-#{{{ hash
-#Returns formated values by hash based on definition of columns
-sub hash {
+sub hash {     #Returns formated values by hash based on definition of columns
 	my $self = shift;
 	my $data = {};
 
@@ -118,39 +89,29 @@ sub hash {
 			#Format datetime attributes
 			my $pattern = $self->c->user->locale eq 'en_US.UTF-8' ? "\%m\/\%d\/\%Y" : "%x";
 			$data->{$key} = defined( $self->$key ) ? $self->$key->strftime($pattern) : undef;
-		}
-		elsif ( $self->$key && $self->definition->{columns}->{$key}->{type} == $self->c->DB_NUMERIC ) {
+		} elsif ( $self->$key && $self->definition->{columns}->{$key}->{type} == $self->c->DB_NUMERIC ) {
 
 			#Format numeric attributes
 			if ( exists( $self->definition->{columns}->{$key}->{format} ) ) {
 				$data->{$key} = sprintf( "$self->definition->{columns}->{$key}->{format}", $self->$key );
-			}
-			else {
+			} else {
 				$data->{$key} = sprintf( "%.2f", $self->$key );
 			}
-		}
-		elsif ( defined( $self->$key ) ) {
+		} elsif ( defined( $self->$key ) ) {
 			$data->{$key} = $self->$key;
-		}
-		else {
+		} else {
 			$data->{$key} = undef;
 		}
 	}
 	return ($data);
 }
 
-#}}}
-#{{{ json
-#Returns hash converted to json
-sub json {
+sub json {    #Returns hash converted to json
 	my $self = shift;
 	return ( $self->c->render( json => $self->hash, partial => 1 )->decode );
 }
 
-#}}}
-#{{{ errors
-#Returns hash of errors
-sub errors {
+sub errors {    #Returns hash of errors
 	my $self   = shift;
 	my $errors = [];
 
@@ -170,10 +131,7 @@ sub errors {
 	return ($errors);
 }
 
-#}}}
-#{{{ validate
-#Return validate based on actual definition
-sub validate {
+sub validate {    #Return validate based on actual definition
 	my $self    = shift;
 	my $params  = shift;
 	my $columns = $self->definition->{columns};
@@ -187,20 +145,21 @@ sub validate {
 	foreach my $key ( keys( %{$params} ) ) {
 
 		#Validate all simple columns with directive rule
-		if ( exists( $columns->{$key} ) && ref( $columns->{$key} ) eq 'HASH' && $columns->{$key}->{type} != $self->c->DB_ARRAY && $self->definition->{columns}->{$key}->{rule} ) {
+		if (   exists( $columns->{$key} )
+			&& ref( $columns->{$key} ) eq 'HASH'
+			&& $columns->{$key}->{type} != $self->c->DB_ARRAY
+			&& $self->definition->{columns}->{$key}->{rule} )
+		{
 			if ( $self->validator->validate($key) ) {
 
 				#Copy value to instance of class by setter
 				if ( $columns->{$key}->{type} == $self->c->DB_DATE ) {
 					$self->$key( $self->func_parse_date( $params->{$key} ) );
-				}
-				elsif ( $columns->{$key}->{type} == $self->c->DB_INT && defined( $params->{$key} ) ) {
+				} elsif ( $columns->{$key}->{type} == $self->c->DB_INT && defined( $params->{$key} ) ) {
 					$self->$key( $params->{$key} + 0 );
-				}
-				elsif ( $columns->{$key}->{type} == $self->c->DB_NUMERIC && defined( $params->{$key} ) ) {
+				} elsif ( $columns->{$key}->{type} == $self->c->DB_NUMERIC && defined( $params->{$key} ) ) {
 					$self->$key( $params->{$key} + 0 );
-				}
-				else {
+				} else {
 					$self->$key( $params->{$key} );
 				}
 			} else {
@@ -209,7 +168,11 @@ sub validate {
 				$columns->{$key}->{invalid} = 1;
 				$errors++;
 			}
-		} elsif ( exists( $columns->{$key} ) && ref( $columns->{$key} ) eq 'HASH' && $columns->{$key}->{type} == $self->c->DB_ARRAY && $self->definition->{columns}->{$key}->{rule}  ) {
+		} elsif ( exists( $columns->{$key} )
+			&& ref( $columns->{$key} ) eq 'HASH'
+			&& $columns->{$key}->{type} == $self->c->DB_ARRAY
+			&& $self->definition->{columns}->{$key}->{rule} )
+		{
 			$self->$key( $params->{$key} );
 		} elsif ( exists( $columns->{$key} ) && ref( $columns->{$key} ) eq 'HASH' && !$self->definition->{columns}->{$key}->{rule} ) {
 			$self->c->app->log->debug(qq(You have tried validate key "$key" without rule parameter in definition !!!));
@@ -219,10 +182,7 @@ sub validate {
 	return ( !$errors );
 }
 
-#}}}
-#{{{ validator
-#Create, memoize and return validator for actual class
-sub validator {
+sub validator {    #Create, memoize and return validator for actual class
 	my $self = shift;
 
 	#Create validators
@@ -243,11 +203,9 @@ sub validator {
 				$columns{$key}->{filters} = 'trim' if ( !$columns{$key}->{filters} );
 				if ( $columns{$key}->{type} == $self->c->DB_DATE ) {
 					$columns{$key}->{validation} = func_validate_date( $self->c->user->locale ) if ( !$columns{$key}->{validation} );
-				}
-				elsif ( $columns{$key}->{type} == $self->c->DB_INT ) {
+				} elsif ( $columns{$key}->{type} == $self->c->DB_INT ) {
 					$columns{$key}->{pattern} = qr/^\d+$/ if ( !$columns{$key}->{pattern} );
-				}
-				elsif ( $columns{$key}->{type} == $self->c->DB_NUMERIC ) {
+				} elsif ( $columns{$key}->{type} == $self->c->DB_NUMERIC ) {
 					$columns{$key}->{pattern} = qr/^[+-]{0,1}\d+[.,]{0,1}\d*$/ if ( !$columns{$key}->{pattern} );
 				}
 
@@ -262,10 +220,7 @@ sub validator {
 	return ( $self->c->app->validator( ref($self) ) );
 }
 
-#}}}
-#{{{AUTOLOAD
-#Default method to handle columns and autoloaders from definition
-sub AUTOLOAD {
+sub AUTOLOAD {    #Default method to handle columns and autoloaders from definition
 	my $self = shift;
 
 	#Dig number or parameters
@@ -297,8 +252,7 @@ sub AUTOLOAD {
 
 			#If is invocated method with name defined as column return value of this column
 			return ( $self->{"_$method"} );
-		}
-		elsif ( exists( $self->definition->{autoloaders}->{$method} ) ) {
+		} elsif ( exists( $self->definition->{autoloaders}->{$method} ) ) {
 
 			#If is invocated method is defined as autoloader load method
 			my $autoloader = $self->definition->{autoloaders}->{$method};
@@ -324,8 +278,7 @@ sub AUTOLOAD {
 						if ( ref( $autoloader->{params}->{$key} ) eq 'CODE' ) {
 							eval("\$obj->$key(&{\$autoloader->{params}->{\$key}}(\$self));");
 							Mojo::Exception->throw("Cafe::Class::AUTLOADER: $@") if ($@);
-						}
-						else {
+						} else {
 							my $method = $autoloader->{params}->{$key};
 							eval { $obj->$key( $self->$method ); };
 							Mojo::Exception->throw("Cafe::Class::AUTLOADER: $@") if ($@);
@@ -336,19 +289,15 @@ sub AUTOLOAD {
 				$self->{"_$autoloader"} = $obj;
 			}
 			return ( $self->{"_$autoloader"} );
-		}
-		else {
+		} else {
 			Mojo::Exception->throw( "Method $method is not defined.\n" . $self->c->caller );
 		}
 	}
 }
 
-#}}}
-
 #Protected methods
-#{{{protected defaults
-#Set default columns values
-sub defaults {
+
+sub defaults {    #Set default columns values
 	my $self = shift;
 
 	#Set default values
@@ -357,10 +306,7 @@ sub defaults {
 	}
 }
 
-#}}}
-#{{{protected func_validate_date
-#Return function to validate date
-sub func_validate_date {
+sub func_validate_date {    #Return function to validate date
 	my $locale = shift;
 	my $retval = sub {
 		my ( $self, $this_field, $all_params ) = @_;
@@ -372,15 +318,13 @@ sub func_validate_date {
 			$year  = $1;
 			$month = $2;
 			$day   = $3;
-		}
-		elsif ($locale eq 'en_US.UTF-8'
+		} elsif ( $locale eq 'en_US.UTF-8'
 			&& $this_field->{value} =~ m!^([1-9]|0[1-9]|1[012])[- /.]{0,1}([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]{0,1}((?:19|20)\d\d)! )
 		{
 			$year  = $3;
 			$month = $1;
 			$day   = $2;
-		}
-		elsif ( $this_field->{value} =~ m!^([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]{0,1}([1-9]|0[1-9]|1[012])[- /.]{0,1}((?:19|20)\d\d)! ) {
+		} elsif ( $this_field->{value} =~ m!^([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]{0,1}([1-9]|0[1-9]|1[012])[- /.]{0,1}((?:19|20)\d\d)! ) {
 			$year  = $3;
 			$month = $2;
 			$day   = $1;
@@ -390,28 +334,21 @@ sub func_validate_date {
 			# At this point, $1 holds the year, $2 the month and $3 the day of the date entered
 			if ( $day == 31 and ( $month == 4 or $month == 6 or $month == 9 or $month == 11 ) ) {
 				return 0;    # 31st of a month with 30 days
-			}
-			elsif ( $day >= 30 and $month == 2 ) {
+			} elsif ( $day >= 30 and $month == 2 ) {
 				return 0;    # February 30th or 31st
-			}
-			elsif ( $month == 2 and $day == 29 and not( $year % 4 == 0 and ( $year % 100 != 0 or $year % 400 == 0 ) ) ) {
+			} elsif ( $month == 2 and $day == 29 and not( $year % 4 == 0 and ( $year % 100 != 0 or $year % 400 == 0 ) ) ) {
 				return 0;    # February 29th outside a leap year
-			}
-			else {
+			} else {
 				return 1;    # Valid date
 			}
-		}
-		else {
+		} else {
 			return 0;        # Not a date
 		}
 	};
 	return ($retval);
 }
 
-#}}}
-#{{{protected func_parse_date
-#Return datetime
-sub func_parse_date {
+sub func_parse_date {        #Return datetime
 	my $self  = shift;
 	my $value = shift;
 	my $date;
@@ -422,8 +359,7 @@ sub func_parse_date {
 			day    => $3,
 			locale => $self->c->user->locale,
 		);
-	}
-	elsif ($self->c->user->locale eq 'en_US.UTF-8'
+	} elsif ( $self->c->user->locale eq 'en_US.UTF-8'
 		&& $value =~ m!^([1-9]|0[1-9]|1[012])[- /.]{0,1}([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]{0,1}((?:19|20)\d\d)! )
 	{
 		$date = DateTime->new(
@@ -432,29 +368,23 @@ sub func_parse_date {
 			day    => $2,
 			locale => $self->c->user->locale,
 		);
-	}
-	elsif ( $value =~ m!^([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]([1-9]|0[1-9]|1[012])[- /.]((?:19|20)\d\d)! ) {
+	} elsif ( $value =~ m!^([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]([1-9]|0[1-9]|1[012])[- /.]((?:19|20)\d\d)! ) {
 		$date = DateTime->new(
 			year   => $3,
 			month  => $2,
 			day    => $1,
 			locale => $self->c->user->locale,
 		);
-	}
-	elsif ( !defined($value) || $value eq '' ) {
+	} elsif ( !defined($value) || $value eq '' ) {
 		$date = undef;
-	}
-	else {
+	} else {
 		Mojo::Exception->throw("Bad date format");
 	}
 
 	return ($date);
 }
 
-#}}}
-#{{{protected func_parse_pg_date
-#Return datetime
-sub func_parse_pg_date {
+sub func_parse_pg_date {    #Return datetime
 	my $self  = shift;
 	my $value = shift;
 	my $date;
@@ -469,42 +399,33 @@ sub func_parse_pg_date {
 			locale    => $self->c->user->locale,
 			time_zone => $7 . "00",
 		);
-	}
-	elsif ( $value && $value =~ /(\d{4})-(\d{2})-(\d{2})/ ) {
+	} elsif ( $value && $value =~ /(\d{4})-(\d{2})-(\d{2})/ ) {
 		$date = DateTime->new(
 			year   => $1,
 			month  => $2,
 			day    => $3,
 			locale => $self->c->user->locale,
 		);
-	}
-	elsif ( !defined($value) || $value eq '' ) {
+	} elsif ( !defined($value) || $value eq '' ) {
 		$date = undef;
-	}
-	else {
+	} else {
 		Mojo::Exception->throw("Bad postgresql date format");
 	}
 	return ($date);
 }
 
-#}}}
-#{{{protected func_validate_array
-#Validate array passed as parameter
-sub func_validate_array {
+sub func_validate_array {    #Validate array passed as parameter
 	my $retval = sub {
 		my ( $self, $this_field, $all_params ) = @_;
 
 		if ( ref( $this_field->{value} ) eq 'ARRAY' ) {
 			return (1);
-		}
-		else {
-			return 0;    # Not a array
+		} else {
+			return 0;        # Not a array
 		}
 	};
 	return ($retval);
 }
-
-#}}}
 
 1;
 

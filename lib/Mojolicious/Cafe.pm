@@ -11,6 +11,8 @@ sub startup {
 	#Setup plugins
 	$self->plugin('Mojolicious::Cafe::Plugin::Locale::Messages');
 	$self->plugin('Mojolicious::Cafe::Plugin::DateTime');
+	$self->plugin('Config');
+
 
 	#Make sessions valid to end of user session
 	$self->sessions->default_expiration(0);
@@ -62,10 +64,7 @@ sub validator {    #Return set/get validators by class name
 sub dbh {
 	my $self = shift;
 
-	my %params = @_ if ( scalar(@_) && ( scalar(@_) % 2 ) == 0 );
-
-	my $config = $self->plugin('Config');
-	$self->log->debug( $self->dumper($config) );
+	my %params = @_ if ( scalar(@_) && ( scalar(@_) % 3 ) == 0 );
 
 	if ( !exists( $self->{_dbh} ) ) {
 		$self->log->warn("Connecting to database...");

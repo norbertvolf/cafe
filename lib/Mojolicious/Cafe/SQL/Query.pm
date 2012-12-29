@@ -2,7 +2,6 @@ package Mojolicious::Cafe::SQL::Query;
 
 use Mojo::Base 'Mojo::Base';
 
-
 has 'columns';
 has 'from_clause';
 has 'where_clause';
@@ -10,227 +9,199 @@ has 'groupby_clause';
 has 'orderby_clause';
 has 'limit_clause';
 
-#{{{ new
-#Create new instance of Mojolicious::Cafe::Listing
-sub new {
+sub new {    #Create new instance of Mojolicious::Cafe::Listing
 	my $class = shift;
-	my $self = $class->SUPER::new();
+	my $self  = $class->SUPER::new();
 	$self->query(shift);
-	return($self);
+	return ($self);
 }
-#}}}
-#{{{ parameters
-#Return parameters from query
-sub parameters {
-	my $self = shift;
+
+sub parameters {    #Return parameters from query
+	my $self  = shift;
 	my $query = $self->query;
 	my @parameters;
 	while ( $query =~ s/@(\w+)/?/ ) {
-		push(@parameters, $1);
+		push( @parameters, $1 );
 	}
-	return(@parameters);
+	return (@parameters);
 }
-#}}}
 
-#{{{ query
-#Set, generate and return query from tokens
-sub query {
+sub query {         #Set, generate and return query from tokens
 	my $self = shift;
 	if ( scalar(@_) ) {
 		$self->{_query} = shift;
 		$self->parse();
 		$self->{_orig_where_clause} = $self->where_clause;
 	}
+
 	#Generate query from clauses
 	my @query;
-	push(@query, 'SELECT', $self->columns, 'FROM',  $self->from_clause);
+	push( @query, 'SELECT', $self->columns, 'FROM', $self->from_clause );
 	if ( $self->where_clause ) {
-		push(@query, 'WHERE', $self->where_clause, );
+		push( @query, 'WHERE', $self->where_clause, );
 	}
 	if ( $self->groupby_clause ) {
-		push(@query, 'GROUP BY', $self->groupby_clause, ) 
+		push( @query, 'GROUP BY', $self->groupby_clause, );
 	}
 	if ( $self->orderby_clause ) {
-		push(@query, 'ORDER BY', $self->orderby_clause, );
+		push( @query, 'ORDER BY', $self->orderby_clause, );
 	}
 	if ( $self->limit_clause ) {
-		push(@query, 'LIMIT', $self->limit_clause, );
+		push( @query, 'LIMIT', $self->limit_clause, );
 	}
-	return(join(' ', @query));
+	return ( join( ' ', @query ) );
 }
-#}}}
-#{{{ fullfeatured
-#Alias for query 
-sub fullfeatured {
+
+sub fullfeatured {    #Alias for query
 	my $self = shift;
-	return($self->query);
+	return ( $self->query );
 }
-#}}}
-#{{{ pretty
-#Return formatted query
-sub pretty {
+
+sub pretty {          #Return formatted query
 	my $self = shift;
 	my $indent = shift // "";
+
 	#Generate query from clauses
 	my @query;
-	push(@query, $indent . "SELECT", $self->columns);
+	push( @query, $indent . "SELECT", $self->columns );
 
 	my $from_clause = $self->from_clause;
 	$from_clause =~ s/(LEFT JOIN|RIGHT JOIN|CROSS JOIN|INNER JOIN|JOIN)/\n$indent\t\t$1/g;
-	push(@query, "\n$indent\tFROM",  $from_clause);
+	push( @query, "\n$indent\tFROM", $from_clause );
 	if ( $self->where_clause ) {
 		my $where_clause = $self->where_clause;
 		$where_clause =~ s/(AND)/\n$indent\t\t$1/g;
-		push(@query, "\n$indent\tWHERE", $where_clause );
+		push( @query, "\n$indent\tWHERE", $where_clause );
 	}
 	if ( $self->groupby_clause ) {
-		push(@query, "\n$indent\tGROUP BY", $self->groupby_clause, ) 
+		push( @query, "\n$indent\tGROUP BY", $self->groupby_clause, );
 	}
 	if ( $self->orderby_clause ) {
-		push(@query, "\n$indent\tORDER BY", $self->orderby_clause, );
+		push( @query, "\n$indent\tORDER BY", $self->orderby_clause, );
 	}
 	if ( $self->limit_clause ) {
-		push(@query, "\n$indent\tLIMIT", $self->limit_clause, );
+		push( @query, "\n$indent\tLIMIT", $self->limit_clause, );
 	}
-	return(join(' ', @query));
+	return ( join( ' ', @query ) );
 }
-#}}}
-#{{{ placeholdered
-#Return query where variables are converted to to placeholders
-sub placeholdered {
-	my $self = shift;
+
+sub placeholdered {    #Return query where variables are converted to to placeholders
+	my $self  = shift;
 	my $query = $self->query;
 	$query =~ s/@\w+/?/g;
-	return($query);
+	return ($query);
 }
-#}}}
-#{{{ orig_where_clause
-#Return original where clause to combine where clause from query and 
-#dynamically prepare where clause
-sub orig_where_clause {
-	return(shift->{_orig_where_clause});
-}
-#}}}
 
-#{{{ counter
-#Generate and return query to compute number of rows 
-sub counter {
+sub orig_where_clause {    #Return original where clause to combine where clause from query and dynamically prepare where clause
+	return ( shift->{_orig_where_clause} );
+}
+
+sub counter {              #Generate and return query to compute number of rows
 	my $self = shift;
+
 	#Generate query from clauses
 	my @query;
-	if ( $self->groupby_clause )  {
-		push(@query, 'SELECT COUNT(*) AS cnt FROM ( SELECT 1 FROM',  $self->from_clause);
+	if ( $self->groupby_clause ) {
+		push( @query, 'SELECT COUNT(*) AS cnt FROM ( SELECT 1 FROM', $self->from_clause );
 		if ( $self->where_clause ) {
-			push(@query, 'WHERE', $self->where_clause, );
+			push( @query, 'WHERE', $self->where_clause, );
 		}
 		if ( $self->groupby_clause ) {
-			push(@query, 'GROUP BY', $self->groupby_clause, ) 
+			push( @query, 'GROUP BY', $self->groupby_clause, );
 		}
-		push(@query, ' ) x' ) 
+		push( @query, ' ) x' );
 	} else {
-		push(@query, 'SELECT COUNT(*) AS cnt FROM',  $self->from_clause);
+		push( @query, 'SELECT COUNT(*) AS cnt FROM', $self->from_clause );
 		if ( $self->where_clause ) {
-			push(@query, 'WHERE', $self->where_clause );
+			push( @query, 'WHERE', $self->where_clause );
 		}
 	}
-	return(join(' ', @query));
+	return ( join( ' ', @query ) );
 }
-#}}}
-#{{{ counter_pretty
-#Return formatted query for counter
-sub counter_pretty {
+
+sub counter_pretty {    #Return formatted query for counter
 	my $self = shift;
 	my $indent = shift // "";
 
 	#Generate query from clauses
 	my @query;
-	if ( $self->groupby_clause )  {
-		push(@query, $indent . "SELECT COUNT(*) FROM ( ");
-		push(@query, $indent . "\tSELECT 1 ");
+	if ( $self->groupby_clause ) {
+		push( @query, $indent . "SELECT COUNT(*) FROM ( " );
+		push( @query, $indent . "\tSELECT 1 " );
 		my $from_clause = $self->from_clause;
 		$from_clause =~ s/(LEFT JOIN|RIGHT JOIN|CROSS JOIN|INNER JOIN|JOIN)/\n$indent\t\t\t$1/g;
-		push(@query, "\n$indent\t\tFROM",  $from_clause);
+		push( @query, "\n$indent\t\tFROM", $from_clause );
 		if ( $self->where_clause ) {
 			my $where_clause = $self->where_clause;
 			$where_clause =~ s/(AND)/\n$indent\t\t\t$1/g;
-			push(@query, "\n$indent\t\tWHERE", $where_clause );
+			push( @query, "\n$indent\t\tWHERE", $where_clause );
 		}
 		if ( $self->groupby_clause ) {
-			push(@query, "\n$indent\t\tGROUP BY", $self->groupby_clause, ) 
+			push( @query, "\n$indent\t\tGROUP BY", $self->groupby_clause, );
 		}
-		push(@query, $indent . "\t) x");
+		push( @query, $indent . "\t) x" );
 	} else {
-		push(@query, $indent, "SELECT COUNT(*) AS cnt");
+		push( @query, $indent, "SELECT COUNT(*) AS cnt" );
 		my $from_clause = $self->from_clause;
 		$from_clause =~ s/(LEFT JOIN|RIGHT JOIN|CROSS JOIN|INNER JOIN|JOIN)/\n$indent\t\t$1/g;
-		push(@query, "\n$indent\tFROM",  $from_clause);
+		push( @query, "\n$indent\tFROM", $from_clause );
 		if ( $self->where_clause ) {
 			my $where_clause = $self->where_clause;
 			$where_clause =~ s/(AND)/\n$indent\t\t$1/g;
-			push(@query, "\n$indent\tWHERE", $where_clause );
+			push( @query, "\n$indent\tWHERE", $where_clause );
 		}
 	}
-	return(join(' ', @query));
+	return ( join( ' ', @query ) );
 }
-#}}}
-#{{{ counter_placeholdered
-#Return counter query where variables are converted to to placeholders
-sub counter_placeholdered {
-	my $self = shift;
+
+sub counter_placeholdered {    #Return counter query where variables are converted to to placeholders
+	my $self  = shift;
 	my $query = $self->counter;
 	$query =~ s/@\w+/?/g;
-	return($query);
+	return ($query);
 }
-#}}}
-#{{{ counter_parameters
-#Return parameters from counter query
-sub counter_parameters {
-	my $self = shift;
+
+sub counter_parameters {       #Return parameters from counter query
+	my $self  = shift;
 	my $query = $self->counter;
 	my @parameters;
 	while ( $query =~ s/@(\w+)/?/ ) {
-		push(@parameters, $1);
+		push( @parameters, $1 );
 	}
-	return(@parameters);
+	return (@parameters);
 }
-#}}}
 
-#{{{ private parse
-#Parse query and fill clause attributes
-sub parse {
+sub parse {                    #Parse query and fill clause attributes
 	my $self = shift;
-	my $str = $self->cleanupquery($self->{_query});
+	my $str  = $self->cleanupquery( $self->{_query} );
 	$str =~ s/^SELECT (.+)$/$1/i;
-	if ( $str =~ s/^(.+) LIMIT (.+)$/$1/i ) { 
-		$self->limit_clause($2 // ''); 
+	if ( $str =~ s/^(.+) LIMIT (.+)$/$1/i ) {
+		$self->limit_clause( $2 // '' );
 	}
-	if ( $str =~ s/^(.+) ORDER BY (.+)$/$1/i ) { 
-		$self->orderby_clause($2 // ''); 
+	if ( $str =~ s/^(.+) ORDER BY (.+)$/$1/i ) {
+		$self->orderby_clause( $2 // '' );
 	}
-	if ( $str =~ s/^(.+) GROUP BY (.+)$/$1/i ) { 
-		$self->groupby_clause($2 // ''); 
+	if ( $str =~ s/^(.+) GROUP BY (.+)$/$1/i ) {
+		$self->groupby_clause( $2 // '' );
 	}
-	if ( $str =~ s/^(.+?) WHERE (.+)$/$1/i ) { 
-		$self->where_clause($2 // ''); 
+	if ( $str =~ s/^(.+?) WHERE (.+)$/$1/i ) {
+		$self->where_clause( $2 // '' );
 	}
-	if ( $str =~ s/^(.+?) FROM (.+)$/$1/i ) { 
-		$self->from_clause($2 // ''); 
+	if ( $str =~ s/^(.+?) FROM (.+)$/$1/i ) {
+		$self->from_clause( $2 // '' );
 	}
 	$self->columns($str);
 }
-#}}}
-#{{{ private cleanupquery
-#Remove all EOLs and whitespace chains
-sub cleanupquery {
+
+sub cleanupquery {    #Remove all EOLs and whitespace chains
 	my $self = shift;
-	my $str = shift;
+	my $str  = shift;
 	$str =~ s/--[^\n]+\n/ /g;
 	$str =~ s/\n/ /g;
 	$str =~ s/^\s+//;
 	$str =~ s/\s+/ /g;
-	return($str);
+	return ($str);
 }
-#}}}
 1;
 
 __END__

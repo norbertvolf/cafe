@@ -1,66 +1,34 @@
 package Mojolicious::Cafe::Controller;
 
 use utf8;
+
 use Mojo::Base 'Mojolicious::Controller';
 use Mojo::Exception;
 use DBI;
-use Cache::Memcached;
 use POSIX qw(strftime locale_h setlocale LC_ALL);
 
-#tmp hash to keep tmp data in session (in user you can keep data per user)
-#see after_dispatch and before_dispatch hook in Mojolicious::Cafe
-has 'tmp' => sub { return ( {} ) };
-
-#{{{ dbh
-#Return instance of DBI class. The class
-#is used as interface between database
-#and Caramel application. The instance
-#is created per vhost.
-sub dbh {
+sub dbh {    #Return instance of DBI class. The class is used as interface between database and Caramel application
 	return ( shift->app->dbh(@_) );
 }
-#}}}
-#{{{ restore_locale
 
-=head3 restore_locale
-
-Restore_locale locale from LIFO
-
-$c->app->restore_locale;
-
-=cut
-
-sub restore_locale {
+sub restore_locale {    #Restore_locale locale from LIFO Ex
 	my ($self) = shift;
 
 	$self->{_local_locale} = [] if ( !defined( $self->{_local_locale} ) );
 	if ( scalar( @{ $self->{_local_locale} } ) ) {
 		my $locale = pop( @{ $self->{_local_locale} } );
 		if ($locale) {
-			$ENV{LANG} = $locale;    #For TextDomain we mu set LANG also
+			$ENV{LANG}     = $locale;    #For TextDomain we mu set LANG also
 			$ENV{LANGUAGE} = $locale;    #For TextDomain we mu set LANG also
 			setlocale( LC_ALL, $locale );
 			my $foo = setlocale(LC_ALL);
 		}
-	}
-	else {
+	} else {
 		Mojo::Exception->throw("Locale array is empty, when I want restore locale.");
 	}
 }
 
-#}}}
-#{{{ set_locale
-
-=head3 set_locale
-
-Set locale and save original locale to LIFO. If $locale
-is not defined use "C".
-
-$c->app->set_locale('cs_CZ.UTF-8');
-
-=cut
-
-sub set_locale {
+sub set_locale {                         #Set locale and save original locale to LIFO. If $locale is not defined use "C".
 	my $self   = shift;
 	my $locale = shift;
 	my $orig;
@@ -69,14 +37,13 @@ sub set_locale {
 	if ( !exists( $self->{_begin} ) ) {
 		$self->{_begin} = 1;
 		$orig = "C";
-	}
-	else {
+	} else {
 		$orig = setlocale(LC_ALL);
 	}
 
 	#Set new locale
 	$locale = "C" unless ($locale);
-	$ENV{LANG} = $locale;    #For TextDomain we mu set LANG also
+	$ENV{LANG}     = $locale;    #For TextDomain we mu set LANG also
 	$ENV{LANGUAGE} = $locale;    #For TextDomain we mu set LANG also
 	setlocale( LC_ALL, $locale );
 
@@ -85,8 +52,6 @@ sub set_locale {
 	push( @{ $self->{_local_locale} }, $orig );
 }
 
-#}}}
-#{{{ constants
 #Redefine Cafe::Class constants as methods
 sub DB_VARCHAR { return (0); }
 sub DB_INT     { return (1); }
@@ -104,10 +69,7 @@ sub FIRST      { return (4); }
 sub PAGE       { return (5); }
 sub PAGESIZE   { return (20); }
 
-#}}}
-#{{{ caller
-#Return string with caller
-sub caller {
+sub caller {    #Return string with caller
 	my $self = shift;
 	my @stack;
 	my ( $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash );
@@ -124,8 +86,6 @@ sub caller {
 	} while ( $subroutine && $i < 5 );
 	return ( "\n" . join( "\n", @stack ) . "\n...\n" );
 }
-
-#}}}
 
 1;
 
@@ -147,13 +107,6 @@ L<Caramel> inherits all methods from L<Mojolicious::Controllers> and
 implements the following new ones.
 
 
-=head2 C<config>
-
-	my $secret = $app->config->{secret};
-	my $secret = $app->config('secret');
-
-Return the configuration hash  of Caramel or value of passed parameter, 
-The configuration is depends on actual virtual hosts.
 
 =head2 C<dbh>
 
@@ -161,17 +114,6 @@ The configuration is depends on actual virtual hosts.
 
 Return DBI object for communicat with database. Database handlers
 is depend on virtual host.
-
-=head2 C<memd>
-
-Return instance of Cache::Memcached. The instance handlers
-is depend on virtual host.
-
-  my $cached_value = $app->memd->get("my_key");
-
-=head2 C<vhost>
-
-Return actual vhost as string.
 
 
 =head1 SEE ALSO
