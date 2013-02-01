@@ -47,16 +47,16 @@ while (<STDIN>) { # like "while(defined($_ = <STDIN>)) {"
 		push(@{$definition->{columns}}, $def);
 
 		if ( $type =~ /integer/ )  {
-			$def->{type} = '$c->DB_INT';
+			$def->{type} = '$class->DB_INT';
 		} elsif ( $type =~ /character/ ) {
-			$def->{type} = '$c->DB_VARCHAR';
+			$def->{type} = '$class->DB_VARCHAR';
 			if ( $type =~ /(\d+)/ ) {
 				$def->{opts} = "$1";
 			}
 		} elsif ( $type =~ /timestamp|date/ ) {
-			$def->{type} = '$c->DB_DATE';
+			$def->{type} = '$class->DB_DATE';
 		} elsif ( $type =~ /numeric|float/ ) {
-			$def->{type} = '$c->DB_NUMERIC';
+			$def->{type} = '$class->DB_NUMERIC';
 		}
 
 		if ( $null =~ /not null/ )  {

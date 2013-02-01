@@ -7,12 +7,21 @@ use Digest::SHA qw(sha1_base64);
 
 sub startup {
 	my $self = shift;
+	my %args = @_;
 
 	#Setup plugins
 	$self->plugin('Mojolicious::Cafe::Plugin::Locale::Messages');
 	$self->plugin('Mojolicious::Cafe::Plugin::DateTime');
+	$self->plugin('Mojolicious::Cafe::Plugin::Locale');
+	$self->plugin(
+		'Mojolicious::Cafe::Plugin::Auth',
+		{
+			load_user      => $args{load_user} // sub { Mojolicious::Cafe::Plugin::Auth::User->new; },
+			validate_user  => $args{validate_user} // sub {},
+			login_redirect => $args{login_redirect} // "/login",
+		}
+	);
 	$self->plugin('Config');
-
 
 	#Make sessions valid to end of user session
 	$self->sessions->default_expiration(0);
@@ -85,6 +94,24 @@ sub dbh {
 		}
 	}
 	return ( $self->app->{_dbh} );
+}
+
+sub caller {    #Return string with caller
+	my $self = shift;
+	my @stack;
+	my ( $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash );
+	my ( $prevline, $prevfilename );
+	my $i = 0;
+	( $package, $prevfilename, $prevline, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash ) =
+	  caller( $i++ );
+	do {
+		( $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash ) =
+		  caller( $i++ );
+		$subroutine = ( $package . $subroutine ) if ( $subroutine && $subroutine eq '(eval)' );
+		push( @stack, "($i) $subroutine:$prevline ($prevfilename)" ) if ($subroutine);
+		( $prevfilename, $prevline ) = ( $filename, $line );
+	} while ( $subroutine && $i < 9 );
+	return ( "\n" . join( "\n", @stack ) . "\n...\n" );
 }
 
 1;

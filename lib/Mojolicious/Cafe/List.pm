@@ -59,9 +59,9 @@ sub load {     #Load persistent data from databases by query defined in class.
 
 			#Convert timestamp from databaze to Datetime
 			map { $r->{$_} = $self->func_parse_pg_date( $r->{$_} ); }
-			  map { $_->{key} } grep { $_->{type} == $self->c->DB_DATE } $self->columns;
+			  map { $_->{key} } grep { $_->{type} == $self->DB_DATE } $self->columns;
 			map { $r->{$_} = Encode::is_utf8( $r->{$_} ) ? $r->{$_} : decode( "utf-8", $r->{$_} ); }
-			  map { $_->{key} } grep { $_->{type} == $self->c->DB_VARCHAR } $self->columns;
+			  map { $_->{key} } grep { $_->{type} == $self->DB_VARCHAR } $self->columns;
 		}
 	}
 	return ( $self->list );
@@ -104,7 +104,7 @@ sub hash {     #Returns formated values by hash based on definition of columns
 			}
 
 			#Convert timestamps to locale date format
-			foreach my $key ( map { $_->{key} } grep { $_->{type} == $self->c->DB_DATE && !exists( $_->{format} ) } $self->columns ) {
+			foreach my $key ( map { $_->{key} } grep { $_->{type} == $self->DB_DATE && !exists( $_->{format} ) } $self->columns ) {
 				$val->{$key} = defined( $val->{$key} ) ? $val->{$key}->strftime("%x") : undef;
 			}
 		} elsif ( ref($_) eq "ARRAY" ) {

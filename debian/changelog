@@ -1,3 +1,9 @@
+libcafe-application-perl (0.9.0-1) stable; urgency=low
+
+   * add support for script running
+
+ -- Norbert Volf <norbert@volf.eu>  Fri,  01 Feb 2013 22:02:00 +0100
+
 libcafe-application-perl (0.8.50-1) stable; urgency=low
 
    * enable sign character in DB_NUMERIC validator

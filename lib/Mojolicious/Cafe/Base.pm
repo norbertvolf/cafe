@@ -5,6 +5,15 @@ use Validation::Class::Simple;
 use DateTime;
 use Scalar::Util qw(weaken);
 
+use constant {
+	DB_VARCHAR => 0,
+	DB_INT     => 1,
+	DB_DATE    => 2,
+	DB_NUMERIC => 3,
+	DB_ARRAY   => 4,
+	DB_INT8    => 6,
+};
+
 has loaded  => 0;
 has okay    => 0;
 has message => 0;
@@ -14,7 +23,7 @@ has 'c';
 
 sub new {            #Create new instance of Cafe::Mojo::Class
 	my $class = shift;
-	my $c     = shift;
+	my $c    = shift;
 	my $def   = shift;
 	my $self  = $class->SUPER::new();
 
@@ -24,7 +33,7 @@ sub new {            #Create new instance of Cafe::Mojo::Class
 	$self->c($c);
 
 	#Add dbh from controller if not exists
-	$def->{dbh} = $self->c->dbh if ( !exists( $def->{dbh} ) );
+	$def->{dbh} = $self->c->app->dbh if ( !exists( $def->{dbh} ) );
 
 	#Set definition of instance if check of defintion is ok
 	#Check end set definition die if there is some error
@@ -83,21 +92,17 @@ sub dump {       #Return string with dumped data
 	);
 }
 
-sub root {    #Return root class for back compatibility root class is  controller now (property *c*)
-	return ( shift->c );
-}
-
 sub hash {    #Returns formated values by hash based on definition of columns
 	my $self = shift;
 	my $data = {};
 
 	foreach my $key ( sort( keys( %{ $self->definition->{columns} } ) ) ) {
-		if ( $self->$key && $self->definition->{columns}->{$key}->{type} == $self->c->DB_DATE ) {
+		if ( $self->$key && $self->definition->{columns}->{$key}->{type} == DB_DATE ) {
 
 			#Format datetime attributes
-			my $pattern = $self->c->user->locale eq 'en_US.UTF-8' ? "\%m\/\%d\/\%Y" : "%x";
+			my $pattern = $self->c->locale eq 'en_US.UTF-8' ? "\%m\/\%d\/\%Y" : "%x";
 			$data->{$key} = defined( $self->$key ) ? $self->$key->strftime($pattern) : undef;
-		} elsif ( $self->$key && $self->definition->{columns}->{$key}->{type} == $self->c->DB_NUMERIC ) {
+		} elsif ( $self->$key && $self->definition->{columns}->{$key}->{type} == DB_NUMERIC ) {
 
 			#Format numeric attributes
 			if ( exists( $self->definition->{columns}->{$key}->{format} ) ) {
@@ -114,11 +119,6 @@ sub hash {    #Returns formated values by hash based on definition of columns
 	return ($data);
 }
 
-sub json {    #Returns hash converted to json
-	my $self = shift;
-	return ( $self->c->render( json => $self->hash, partial => 1 )->decode );
-}
-
 sub errors {    #Returns hash of errors
 	my $self   = shift;
 	my $errors = [];
@@ -130,7 +130,7 @@ sub errors {    #Returns hash of errors
 				{
 					label => $self->definition->{columns}->{$key}->{label} // $key,
 					error => $self->definition->{columns}->{$key}->{error}
-					  // sprintf( $self->c->__('Invalid %s field'), $self->definition->{columns}->{$key}->{label} // $key ),
+					  // sprintf( $self->c->app->__('Invalid %s field'), $self->definition->{columns}->{$key}->{label} // $key ),
 					key => $key,
 				}
 			);
@@ -155,17 +155,17 @@ sub validate {    #Return validate based on actual definition
 		#Validate all simple columns with directive rule
 		if (   exists( $columns->{$key} )
 			&& ref( $columns->{$key} ) eq 'HASH'
-			&& $columns->{$key}->{type} != $self->c->DB_ARRAY
+			&& $columns->{$key}->{type} != DB_ARRAY
 			&& $self->definition->{columns}->{$key}->{rule} )
 		{
 			if ( $self->validator->validate($key) ) {
 
 				#Copy value to instance of class by setter
-				if ( $columns->{$key}->{type} == $self->c->DB_DATE ) {
+				if ( $columns->{$key}->{type} == DB_DATE ) {
 					$self->$key( $self->func_parse_date( $params->{$key} ) );
-				} elsif ( $columns->{$key}->{type} == $self->c->DB_INT && defined( $params->{$key} ) ) {
+				} elsif ( $columns->{$key}->{type} == DB_INT && defined( $params->{$key} ) ) {
 					$self->$key( $params->{$key} + 0 );
-				} elsif ( $columns->{$key}->{type} == $self->c->DB_NUMERIC && defined( $params->{$key} ) ) {
+				} elsif ( $columns->{$key}->{type} == DB_NUMERIC && defined( $params->{$key} ) ) {
 					$self->$key( $params->{$key} + 0 );
 				} else {
 					$self->$key( $params->{$key} );
@@ -178,7 +178,7 @@ sub validate {    #Return validate based on actual definition
 			}
 		} elsif ( exists( $columns->{$key} )
 			&& ref( $columns->{$key} ) eq 'HASH'
-			&& $columns->{$key}->{type} == $self->c->DB_ARRAY
+			&& $columns->{$key}->{type} == DB_ARRAY
 			&& $self->definition->{columns}->{$key}->{rule} )
 		{
 			$self->$key( $params->{$key} );
@@ -199,7 +199,7 @@ sub validator {    #Create, memoize and return validator for actual class
 	#Set up validators for simple type columns (ignory array type)
 	my %columns =
 	  map { $_ => $self->definition->{columns}->{$_} }
-	  grep { $self->definition->{columns}->{$_}->{type} != $self->c->DB_ARRAY } keys( %{ $self->definition->{columns} } );
+	  grep { $self->definition->{columns}->{$_}->{type} != DB_ARRAY } keys( %{ $self->definition->{columns} } );
 
 	#Is validator memoized
 	if ( !$self->c->app->validator( ref($self) ) ) {
@@ -209,11 +209,11 @@ sub validator {    #Create, memoize and return validator for actual class
 				#Create validator from attributes where rule directive is true
 				$fields{$key} = {};
 				$columns{$key}->{filters} = 'trim' if ( !$columns{$key}->{filters} );
-				if ( $columns{$key}->{type} == $self->c->DB_DATE ) {
-					$columns{$key}->{validation} = func_validate_date( $self->c->user->locale ) if ( !$columns{$key}->{validation} );
-				} elsif ( $columns{$key}->{type} == $self->c->DB_INT ) {
+				if ( $columns{$key}->{type} == DB_DATE ) {
+					$columns{$key}->{validation} = func_validate_date( $self->c->locale ) if ( !$columns{$key}->{validation} );
+				} elsif ( $columns{$key}->{type} == DB_INT ) {
 					$columns{$key}->{pattern} = qr/^\d+$/ if ( !$columns{$key}->{pattern} );
-				} elsif ( $columns{$key}->{type} == $self->c->DB_NUMERIC ) {
+				} elsif ( $columns{$key}->{type} == DB_NUMERIC ) {
 					$columns{$key}->{pattern} = qr/^[+-]{0,1}\d+[.,]{0,1}\d*$/ if ( !$columns{$key}->{pattern} );
 				}
 
@@ -298,7 +298,7 @@ sub AUTOLOAD {    #Default method to handle columns and autoloaders from definit
 			}
 			return ( $self->{"_$autoloader"} );
 		} else {
-			Mojo::Exception->throw( "Method $method is not defined.\n" . $self->c->caller );
+			Mojo::Exception->throw( "Method $method is not defined.\n" . $self->c->app->caller );
 		}
 	}
 }
@@ -365,23 +365,23 @@ sub func_parse_date {        #Return datetime
 			year   => $1,
 			month  => $2,
 			day    => $3,
-			locale => $self->c->user->locale,
+			locale => $self->c->locale,
 		);
-	} elsif ( $self->c->user->locale eq 'en_US.UTF-8'
+	} elsif ( $self->c->locale eq 'en_US.UTF-8'
 		&& $value =~ m!^([1-9]|0[1-9]|1[012])[- /.]{0,1}([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]{0,1}((?:19|20)\d\d)! )
 	{
 		$date = DateTime->new(
 			year   => $3,
 			month  => $1,
 			day    => $2,
-			locale => $self->c->user->locale,
+			locale => $self->c->locale,
 		);
 	} elsif ( $value =~ m!^([1-9]|0[1-9]|[12][0-9]|3[01])[- /.]([1-9]|0[1-9]|1[012])[- /.]((?:19|20)\d\d)! ) {
 		$date = DateTime->new(
 			year   => $3,
 			month  => $2,
 			day    => $1,
-			locale => $self->c->user->locale,
+			locale => $self->c->locale,
 		);
 	} elsif ( !defined($value) || $value eq '' ) {
 		$date = undef;
@@ -396,7 +396,7 @@ sub func_parse_pg_date {    #Return datetime
 	my $self  = shift;
 	my $value = shift;
 	my $date;
-	if ( $value && $value =~ /(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})([+-]\d{2})/ ) {
+	if ( $value && $value =~ /(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.\d+|)([+-]\d{2})/ ) {
 		$date = DateTime->new(
 			year      => $1,
 			month     => $2,
@@ -404,7 +404,7 @@ sub func_parse_pg_date {    #Return datetime
 			hour      => $4,
 			minute    => $5,
 			second    => $6,
-			locale    => $self->c->user->locale,
+			locale    => $self->c->locale,
 			time_zone => $7 . "00",
 		);
 	} elsif ( $value && $value =~ /(\d{4})-(\d{2})-(\d{2})/ ) {
@@ -412,7 +412,7 @@ sub func_parse_pg_date {    #Return datetime
 			year   => $1,
 			month  => $2,
 			day    => $3,
-			locale => $self->c->user->locale,
+			locale => $self->c->locale,
 		);
 	} elsif ( !defined($value) || $value eq '' ) {
 		$date = undef;
@@ -502,7 +502,7 @@ Type of attribute si constant defined as method in Mojolicious::Cafe::Controller
 
 =back
 
-C<type =E<gt> $c->DB_INT>
+C<type =E<gt> $app->DB_INT>
 
 =head2 primary_key
 
@@ -586,12 +586,11 @@ C<max_length =E<gt> 10>
 
 =head1 METHODS
 
-=head2 json
+=head2 dump
 
-B<json> method returns hash from the instance converted to json string. Usable to 
-generate json as part of template.
+B<dump> Return string with dumped data, usable for testing.
 
-C<my $json = $banner->json>
+C<my $json = $banner->dump>
 
 =cut
 }}}

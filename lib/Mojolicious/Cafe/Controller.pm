@@ -52,41 +52,6 @@ sub set_locale {                         #Set locale and save original locale to
 	push( @{ $self->{_local_locale} }, $orig );
 }
 
-#Redefine Cafe::Class constants as methods
-sub DB_VARCHAR { return (0); }
-sub DB_INT     { return (1); }
-sub DB_DATE    { return (2); }
-sub DB_NUMERIC { return (3); }
-sub DB_ARRAY   { return (4); }
-sub DB_INT8    { return (6); }
-sub CAFE_TTL   { return (300); }
-sub OK         { return (1); }
-sub NOK        { return (0); }
-sub NEXT       { return (1); }
-sub PREV       { return (2); }
-sub LAST       { return (3); }
-sub FIRST      { return (4); }
-sub PAGE       { return (5); }
-sub PAGESIZE   { return (20); }
-
-sub caller {    #Return string with caller
-	my $self = shift;
-	my @stack;
-	my ( $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash );
-	my ( $prevline, $prevfilename );
-	my $i = 0;
-	( $package, $prevfilename, $prevline, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash ) =
-	  caller( $i++ );
-	do {
-		( $package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash ) =
-		  caller( $i++ );
-		$subroutine = ( $package . $subroutine ) if ( $subroutine && $subroutine eq '(eval)' );
-		push( @stack, "($i) $subroutine:$prevline ($prevfilename)" ) if ($subroutine);
-		( $prevfilename, $prevline ) = ( $filename, $line );
-	} while ( $subroutine && $i < 5 );
-	return ( "\n" . join( "\n", @stack ) . "\n...\n" );
-}
-
 1;
 
 __END__

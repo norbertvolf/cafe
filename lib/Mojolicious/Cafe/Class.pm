@@ -15,24 +15,11 @@ sub check {    #Check definiton, passed as paramaters
 	my $def  = shift;
 
 	#Exists primary key
-	Mojo::Exception->throw( "Not defined primary key." . $self->c->caller )
+	Mojo::Exception->throw( "Not defined primary key." . $self->c->app->caller )
 	  if ( !scalar( grep { defined( $_->{primary_key} ) && $_->{primary_key} == 1 } $self->columns($def) ) );
 
 	#Exists entity key
 	Mojo::Exception->throw("Not defined entity.") if ( !exists( $def->{entity} ) || !defined( $def->{entity} ) );
-
-	#Add last user capability
-	if (   !exists( $def->{autoloaders}->{lastuser} )
-		&& !exists( $def->{columns}->{lastuser} )
-		&& exists( $def->{columns}->{stateuser} ) )
-	{
-		$def->{autoloaders}->{lastuser} = {
-			class  => $self->c->config->{user_class},
-			params => {
-				iduser => sub { my $self = shift; return ( $self->stateuser ? $self->stateuser : $self->c->user->iduser ); }
-			},
-		};
-	}
 
 	#You cant use column named as hash, because there is method named 'hash'
 	Mojo::Exception->throw("You cant use column named as hash, because there is method named 'hash'")
@@ -58,14 +45,14 @@ sub load {    #Load class data from database You can pass parameters thru HASH p
 			my $sth = $self->dbh->prepare($query);
 			eval { $sth->execute( $self->pkv ); };
 			if ($@) {
-				Mojo::Exception->throw( $@ . $self->c->caller );
+				Mojo::Exception->throw( $@ . $self->c->app->caller );
 			}
 			$self->loaded(1);
 			if ( my $row = $sth->fetchrow_hashref() ) {
 
 				#Fill instance from model
 				foreach my $key ( keys( %{ $self->definition->{columns} } ) ) {
-					if ( $self->definition->{columns}->{$key}->{type} == $self->c->DB_DATE ) {
+					if ( $self->definition->{columns}->{$key}->{type} == $self->DB_DATE ) {
 						$self->$key( $self->func_parse_pg_date( $row->{$key} ) );
 					} else {
 						$self->$key( $row->{$key} );
@@ -163,7 +150,7 @@ sub save {    #Save to database instance of Cafe::Mojo::Class. Class must You mu
 				  . join( ", ", map { $_->{key} } ( $self->pkc, $self->attrc ) )
 				  . ") VALUES ("
 				  . join( ", ", map { "?" } ( $self->pkc, $self->attrc ) ) . ")";
-				$self->c->app->log->debug( "$query (" . join( ',', map { $_ // 'NULL' } $self->pkv, $self->attrv ) . ")" );
+				$self->c->log->debug( "$query (" . join( ',', map { $_ // 'NULL' } $self->pkv, $self->attrv ) . ")" );
 				my $sth = $self->dbh->prepare($query);
 				$self->root->set_locale("C");
 				eval { $sth->execute( $self->pkv, $self->attrv ); };
@@ -188,7 +175,7 @@ sub save {    #Save to database instance of Cafe::Mojo::Class. Class must You mu
 				  . join( " , ", map { "$_->{key} = ?" } $self->attrc )
 				  . " WHERE "
 				  . join( " AND ", map { "$_->{key} = ?" } $self->pkc );
-				$self->c->app->log->debug( "$query (" . join( ',', map { $_ // 'NULL' } ( $self->attrv, $self->pkv ) ) . ")" );
+				$self->c->log->debug( "$query (" . join( ',', map { $_ // 'NULL' } ( $self->attrv, $self->pkv ) ) . ")" );
 				my $sth = $self->dbh->prepare($query);
 				$sth->execute( $self->attrv, $self->pkv );
 			} else {
@@ -258,7 +245,7 @@ sub validator {    #Overwrite parent method to add directives created from datab
 		my %columns = %{ $self->definition->{columns} };
 		foreach my $key ( keys(%columns) ) {
 			if ( $columns{$key}->{rule} ) {
-				if (   $columns{$key}->{type} == $self->c->DB_VARCHAR
+				if (   $columns{$key}->{type} == $self->DB_VARCHAR
 					&& $self->priv_column_info($key)->{TYPE_NAME} eq 'character varying' )
 				{
 					$columns{$key}->{max_length} = $self->priv_column_info($key)->{COLUMN_SIZE};
@@ -330,25 +317,6 @@ sub exists {    #If record exists returns 1, if record does not exists return 0,
 		}
 	}
 	return ( $self->{_exists} );
-}
-
-sub hash {    #Add lastuser inform if possible to hash
-	my $self = shift;
-	my $data = $self->SUPER::hash();
-	if ( !exists( $data->{revisions} ) ) {
-		$data->{revisions} = { last => {} };
-		if ( exists( $self->definition->{columns}->{statestamp} ) ) {
-			if ( defined( $self->statestamp ) && ref( $self->statestamp ) eq 'DateTime' ) {
-				$data->{revisions}->{last}->{statestamp} = $self->statestamp->strftime('%x %X');
-			} else {
-				$data->{revisions}->{last}->{statestamp} = "";
-			}
-		}
-		if ( exists( $self->definition->{columns}->{stateuser} ) ) {
-			$data->{revisions}->{last}->{signature} = $self->lastuser->signature;
-		}
-	}
-	return ($data);
 }
 
 sub priv_column_info {    #Return column info for column passed as parameter
