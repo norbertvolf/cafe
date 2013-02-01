@@ -4,6 +4,18 @@ libcafe-application-perl (0.9.0-1) stable; urgency=low
 
  -- Norbert Volf <norbert@volf.eu>  Fri,  01 Feb 2013 22:02:00 +0100
 
+libcafe-application-perl (0.8.51-1) stable; urgency=low
+
+   * rich execution message of list
+   * add validation example to documentation
+   * add column definition test
+   * tidy and clean code
+   * remove controller dependency in messages plugin
+   * remove auth code from app class
+   * add Datetime dependency
+
+ -- Norbert Volf <norbert@volf.eu>  Thu,  30 Dec 2012 00:57:00 +0100
+
 libcafe-application-perl (0.8.50-1) stable; urgency=low
 
    * enable sign character in DB_NUMERIC validator
