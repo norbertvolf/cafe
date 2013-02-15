@@ -22,6 +22,7 @@ sub register {
 	my $validate_user_cb = $args->{validate_user};
 	my $our_stash_key    = $args->{session_key} || 'auth_data';
 	my $login_redirect   = $args->{login_redirect} || '/login';
+	my $iduser_column   = $args->{iduser_column} || 'username';
 
     if ( ! $args->{login_redirect} ) {
         die __PACKAGE__, ": missing 'login_redirect' array ref or string in parameters\n"
@@ -51,8 +52,14 @@ sub register {
         }
     };
 
+    #Return user object
 	$app->helper(
 		user => sub { return (&$load_user_priv(shift)->{user}); }
+	);
+
+    #Return user identifier
+	$app->helper(
+		iduser => sub { return (&$load_user_priv(shift)->{user}->$iduser_column); }
 	);
 
 	$app->helper(
