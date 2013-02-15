@@ -34,7 +34,7 @@ sub startup {
 			my $c = shift;
 
 			#Check database connection
-			$c->dbh( check => 1 );
+			$c->app->dbh( check => 1 );
 		}
 	);
 	$self->hook(
@@ -42,10 +42,10 @@ sub startup {
 			my $c = shift;
 
 			#Check database connection
-			$c->dbh( check => 1 );
+			$c->app->dbh( check => 1 );
 
 			#Workaround about forgot transactions. Fire query to force transaction
-			$c->dbh->do("SELECT 'Keep alive connection'");
+			$c->app->dbh->do("SELECT 'Keep alive connection'");
 		}
 	);
 
