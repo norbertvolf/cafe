@@ -257,9 +257,11 @@ sub validator {    #Overwrite parent method to add directives created from datab
 sub validate {    #Validate record - first validate primary key and load original record and then use parent validate method
 	my $self   = shift;
 	my $params = shift;
-	my %pk     = map { $_->{key} => $params->{ $_->{key} } } $self->pkc;
-	$self->SUPER::validate( \%pk );
-	$self->load;
+	if ( ! $self->loaded ) {
+		my %pk     = map { $_->{key} => $params->{ $_->{key} } } $self->pkc;
+		$self->SUPER::validate( \%pk );
+		$self->load;
+	}
 	return ( $self->SUPER::validate($params) );
 }
 
