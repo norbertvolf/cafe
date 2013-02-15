@@ -114,8 +114,8 @@ sub save {    #Save to database instance of Cafe::Mojo::Class. Class must You mu
 	#no change attributes via class hash directly !!!!!!!!! or you
 	#must know what happened
 	if ( $self->changed ) {
-		if ( $self->c->config->{user_class} && exists( $self->definition->{columns}->{stateuser} ) && $self->c->user ) {
-			$self->stateuser( defined( $self->c->user->iduser ) ? $self->c->user->iduser : 0 );
+		if ( exists( $self->definition->{columns}->{stateuser} ) ) {
+			$self->stateuser( defined( $self->c->iduser ) ? $self->c->iduser : 0 );
 		}
 
 		#Set last modified time
