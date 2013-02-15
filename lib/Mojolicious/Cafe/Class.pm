@@ -150,14 +150,12 @@ sub save {    #Save to database instance of Cafe::Mojo::Class. Class must You mu
 				  . join( ", ", map { $_->{key} } ( $self->pkc, $self->attrc ) )
 				  . ") VALUES ("
 				  . join( ", ", map { "?" } ( $self->pkc, $self->attrc ) ) . ")";
-				$self->c->log->debug( "$query (" . join( ',', map { $_ // 'NULL' } $self->pkv, $self->attrv ) . ")" );
+				$self->c->app->log->debug( "$query (" . join( ',', map { $_ // 'NULL' } $self->pkv, $self->attrv ) . ")" );
 				my $sth = $self->dbh->prepare($query);
-				$self->root->set_locale("C");
 				eval { $sth->execute( $self->pkv, $self->attrv ); };
 				if ($@) {
-					Mojo::Exception->throw( "$@" . $self->c->caller );
+					Mojo::Exception->throw( "$@" . $self->c->app->caller );
 				}
-				$self->root->restore_locale();
 			} elsif (
 				scalar( $self->pkc ) == scalar(
 					grep {
@@ -175,7 +173,7 @@ sub save {    #Save to database instance of Cafe::Mojo::Class. Class must You mu
 				  . join( " , ", map { "$_->{key} = ?" } $self->attrc )
 				  . " WHERE "
 				  . join( " AND ", map { "$_->{key} = ?" } $self->pkc );
-				$self->c->log->debug( "$query (" . join( ',', map { $_ // 'NULL' } ( $self->attrv, $self->pkv ) ) . ")" );
+				$self->c->app->log->debug( "$query (" . join( ',', map { $_ // 'NULL' } ( $self->attrv, $self->pkv ) ) . ")" );
 				my $sth = $self->dbh->prepare($query);
 				$sth->execute( $self->attrv, $self->pkv );
 			} else {
@@ -183,7 +181,7 @@ sub save {    #Save to database instance of Cafe::Mojo::Class. Class must You mu
 					  . join( ',', map { $_->{key} } $self->pkc )
 					  . "\nValues:"
 					  . join( ',', $self->pkv )
-					  . $self->c->caller );
+					  . $self->c->app->caller );
 			}
 		} else {
 			if ( !$self->definition ) {
